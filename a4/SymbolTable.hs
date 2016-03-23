@@ -1,6 +1,7 @@
-module ST where
+module SymbolTable where --(ST,empty,new_scope,insert,lookup,return)
 
 import AST
+
 
 data SYM_DESC = ARGUMENT (String,M_type,Int)
               | VARIABLE (String,M_type,Int)
@@ -8,19 +9,32 @@ data SYM_DESC = ARGUMENT (String,M_type,Int)
               | DATATYPE String 
               | CONSTRUCTOR (String, [M_type], String)
 
+-- I_VARIABLE (level, offset, type, dimension)
+-- I_FUNCTION (level, label, [arguments], return type)
+-- I_CONSTRUCTOR (int, [type], datatype name)
+-- I_TYPE (name);
 data SYM_I_DESC = I_VARIABLE (Int,Int,M_type,Int)
                     | I_FUNCTION (Int,String,[(M_type,Int)],M_type)
                     | I_CONSTRUCTOR (Int,[M_type],String)
                     | I_TYPE [String];
 
-data ScopeType = L_PROG | L_FUN M_Type | L_BLK | L_CASE
+data ScopeType = L_PROG | L_FUN M_type | L_BLK | L_CASE
 
+data SYM_VALUE = Var_attr (Int,M_type,Int)
+                  | Fun_attr (String,[(M_type,Int)],M_type)
+                  | Con_attr (Int, [M_type], String)
+                  | Typ_attr [String]
+
+-- Symbol_table (leve, offset, [(String,SYM_VALUE)])
+data SYM_TABLE = Symbol_table (Int,Int,[(String,SYM_VALUE)])
+
+type ST = [SYM_TABLE]
 
 empty:: ST
 empty = []
 
 new_scope :: ScopeType -> ST -> ST
-   newscope s = (Symbol_table(0,0,[])):s
+new_scope s = (Symbol_table(0,0,[])):s
 
 lookup :: ST -> String -> SYM_I_DESC 
 lookup s x = find 0 s 
@@ -34,11 +48,11 @@ lookup s x = find 0 s
                                |otherwise =  find_level rest
       find_level [] = Nothing
 
-      find n [] = error ("Could not find "++ str)
-      find n (Symbol_table(_,_,vs)::rest) = 
-             (case find_level vs of 
-	          Just v -> found n v
-		  Nothing -> find (n+1) rest)
+      find n [] = error ("Could not find "++ x)
+      find n (Symbol_table(_,_,vs):rest) =   -- what is vs... variables?  so get the vars of the first ST
+             (case find_level vs of           -- does this ST have the var in it?
+	          Just v -> found n v         -- return as an IVAR or IFUN.
+		  Nothing -> find (n+1) rest) -- look at next ST.
 
 insert :: Int -> ST -> SYM_DESC -> (Int,ST) 
 insert n [] d =  error "Symbol table error: insertion before defining scope."
@@ -46,17 +60,25 @@ insert n ((Symbol_table(nL,nA,sL)):rest) (ARGUMENT(str,t,dim))
            | (in_index_list str sL) = error
                 ("Symbol table error: " ++ str ++"is already defined.")
            | otherwise = (n,Symbol_table(nL,nA+1
-                             ,(str,Var_attr(~(nA+4),T,dim))::sL))
-insert n ((Symbol_table(nL,nA,sL)):rest) (VARIABLE (str,T,dim)) 
+                             ,(str,Var_attr(~(nA+4),t,dim))::sL))	-- what is ~(nA+4)?
+	where in_index_list str [] = False
+              in_index_list str ((x,_):xs)| str==x = True
+                                          | otherwise = in_index_list str xs
+insert n ((Symbol_table(nL,nA,sL)):rest) (VARIABLE (str,t,dim)) 
            | (in_index_list str sL) 
 	       = error ("Symbol table error: "++ str ++"is already defined.")
            | otherwise = (n,Symbol_table(nL+1,nA
-                             ,(str,Var_attr(nL+1,T,dim))::sL))
-insert n ((Symbol_table(nL,nA,sL)):rest) FUNCTION (str,Ts,T)
+                             ,(str,Var_attr(nL+1,t,dim))::sL))
+	where in_index_list str [] = False
+              in_index_list str ((x,_):xs)| str==x = True
+                                          | otherwise = in_index_list str xs
+insert n ((Symbol_table(nL,nA,sL)):rest) FUNCTION (str,ts,t)
            | in_index_list str sL 
 	       = error ("Symbol table error: "++str++"is already defined.")
-           | otherwise = (n+1,(Symbol_table(nL,nA,(str,Fun_attr(getlabel n "fn",Ts,T)):sL)
+           | otherwise = (n+1,(Symbol_table(nL,nA,(str,Fun_attr(getlabel n "fn",ts,t)):sL)
                               ):rest)
 	where in_index_list str [] = False
               in_index_list str ((x,_):xs)| str==x = True
                                           | otherwise = in_index_list str xs
+
+--return:: ST -> M_type
