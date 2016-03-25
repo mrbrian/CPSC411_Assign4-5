@@ -1,34 +1,6 @@
 var x:int;
-
-fun f(y:int, z:int):int
-
+fun f():int
 {
-
-var x, a[y][z]:int
-
-fun g(a[][]:int, b:int):int
-
-{
-
-var y, i, j:int
-
-begin
-
-
-a[i][j] = f(x, y)
-
-return y;
-
-end
-
-}
-
-begin
-
-end
-
-}
-
-begin 
-
-end
+	var x:int;
+	return x;
+};

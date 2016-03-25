@@ -22,5 +22,5 @@ main = do
         Ok  tree -> do
             let ast = transProg tree
             let st = process ast
-            putStrLn $ ppShow st
+            putStrLn $ ((ppShow ast) ++ "\n\n" ++ (ppShow st))
         Bad msg-> putStrLn msg

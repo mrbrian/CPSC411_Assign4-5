@@ -115,7 +115,7 @@ insert n [] d = error "Symbol table error: insertion before defining scope."
 -- sT = scope type, nL = level, nA = numArgs, str = ?, sL = symbolList?
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (ARGUMENT(str,t,dim)) 								-- adding an arg..
 	   | (in_index_list str sL) = error ("Symbol table error: " ++ str ++"is already defined.")
-	   | otherwise = (n, Symbol_table(sT, nL,nA+1,(str,Var_attr(nA+1,t,dim)) : sL) : rest)	-- what is ~(nA+4)?  offset..  why + 4?  am I inserting a variable??  why nA + 1
+	   | otherwise = (n, Symbol_table(sT, nL,nA+1,(str,Var_attr(negate(nA + 4),t,dim)) : sL) : rest)	-- what is ~(nA+4)?  offset..  why + 4?  am I inserting a variable??  why nA + 1
 
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (VARIABLE (str,t,dim)) 
 	   | (in_index_list str sL) = error ("Symbol table error: "++ str ++"is already defined.")
@@ -149,7 +149,7 @@ in_index_list str ((x,_):xs)
 
 -- whats the number for?
 get_label :: Int -> String -> String
-get_label n str = error "not implemented"
+get_label n str = (show n) ++ str --error "not implemented"
 
 -- just popping off the top scope?   
 remove_scope :: ST -> (Int, ST)
@@ -179,7 +179,7 @@ process_decls st [] = ([], [])
 process_decls st (d : rest) = (sL:sL', st''++st')
      where 
         (sL, st') = process_decl st d 
-	(sL', st'') = process_decls st rest
+        (sL', st'') = process_decls st rest
 --   M_fun (String,[(String,Int,M_type)],M_type,[M_decl],[M_stmt]) ->
 --   M_data (String,[(String,[M_type])]) ->
 --   ARGUMENT (name, ty, val) -> insert n? (process_decl st d) : (process_decls rest)
@@ -188,11 +188,20 @@ process_decls st (d : rest) = (sL:sL', st''++st')
 process_decl :: [SYM_TABLE] -> M_decl -> ((String, SYM_VALUE), [SYM_TABLE])
 process_decl st d = case d of
    M_var (name, arrSize, typ) ->  ((name, Var_attr (0, typ, (count_dim 0 arrSize))), st)
-   M_fun (name,[(pN,pD,pT)],rT,ds,sts) ->  ((name, Fun_attr (0, typ, (count_dim 0 arrSize))), st)
-   where 
-      count_dim n [] = n
-      count_dim n (x:xs) = count_dim (n+1) xs
+     where 
+        sT = []--insert 0 st
+        count_dim n [] = n
+        count_dim n (x:xs) = count_dim (n+1) xs	  
+   M_fun (name,pL,rT,ds,sts) -> ((name, fun), insert 0 st)
+     where 
+        fun = Fun_attr (get_label 0 "fn", [], rT)
+		--sL = []--process_params pL
+        --sT = []--insert 0 st
+        count_dim n [] = n
+        count_dim n (x:xs) = count_dim (n+1) xs
         
+--process_params
+
 --process_stmt :: M_stmt -> ST
 
 
