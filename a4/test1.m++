@@ -1,5 +1,5 @@
-var x:int;
-fun f():int
+var x,y:int;
+fun f(z:int, y:int):int
 {
 	var x:int;
 	return x;
