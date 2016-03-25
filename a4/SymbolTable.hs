@@ -12,6 +12,7 @@ data SYM_DESC = ARGUMENT (String, M_type, Int)
 -- I_FUNCTION (level, label, [arguments], return type)
 -- I_CONSTRUCTOR (constructor#, [type], datatype name)
 -- I_TYPE (name);
+
 data SYM_I_DESC = I_VARIABLE (Int,Int,M_type,Int)
                     | I_FUNCTION (Int,String,[(M_type,Int)],M_type)
                     | I_CONSTRUCTOR (Int,[M_type],String)
@@ -107,7 +108,7 @@ look_up s x = find 0 s
 		  Nothing -> find (n+1) rest) 		-- look at next ST.
 
 -- so.  its not a new scope!   so ok yes  inserting a var symbol or something.
--- n = ..?
+-- n = current function label # ??
 insert :: Int -> ST -> SYM_DESC -> (Int,ST) 
 insert n [] d = error "Symbol table error: insertion before defining scope."
 
@@ -123,7 +124,7 @@ insert n ((Symbol_table(sT, nL,nA,sL)):rest) (VARIABLE (str,t,dim))
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (FUNCTION (str,ts,t))
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
 	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str,Fun_attr(get_label n "fn",ts,t)):sL)):rest)
-	   
+	   {-
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE strL)			-- 
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
 	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str,Typ_attr strL):sL)):rest)
@@ -132,7 +133,7 @@ insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE strL)			--
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (CONSTRUCTOR (cN,cT,cD))
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
 	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str, Con_attr(cN,cT,cD)):sL)):rest)
-	   {-
+	   
                   | Con_attr (Int, [M_type], String)
                   | Typ_attr [String]
 				  -}
@@ -145,9 +146,10 @@ in_index_list str ((x,_):xs)
 	  | str == x = True
 	  | otherwise = in_index_list str xs
 
+
 -- whats the number for?
 get_label :: Int -> String -> String
-get_label n str = ""
+get_label n str = error "not implemented"
 
 -- just popping off the top scope?   
 remove_scope :: ST -> (Int, ST)
@@ -166,18 +168,31 @@ return (s:rest) = case sT of
 		Symbol_table (sT,_,_,_) = s
 
 process :: M_prog -> ST
-process M_prog (ds, _) = process_decls (Symbol_table (L_PROG, 0, 0, [])) ds
+process (M_prog (ds, _)) = rest ++ st
+	where
+		st = [Symbol_table (L_PROG, 0, 0, sL)]
+		(sL, rest) = process_decls [] ds
 
-process_decls :: ST -> [M_decl] -> [(String,SYM_VALUE)]
-process_decls [] = []
-process_decls (d : rest) = (process_decl d) : (process_decls rest)
+-- 
+process_decls :: [SYM_TABLE] -> [M_decl] -> ([(String, SYM_VALUE)], [SYM_TABLE])
+process_decls st [] = ([], [])
+process_decls st (d : rest) = (sL:sL', st''++st')
+     where 
+        (sL, st') = process_decl st d 
+	(sL', st'') = process_decls st rest
+--   M_fun (String,[(String,Int,M_type)],M_type,[M_decl],[M_stmt]) ->
+--   M_data (String,[(String,[M_type])]) ->
+--   ARGUMENT (name, ty, val) -> insert n? (process_decl st d) : (process_decls rest)
 
-process_decls :: ST -> M_decl -> [(String,SYM_VALUE)]
-process_decls st d = case d of
-	M_var (String,[M_expr],M_type) -> insert st
-	M_fun (String,[(String,Int,M_type)], M_type,[M_decl],[M_stmt]) -> insert
 
-process_stmt :: M_stmt -> ST
+process_decl :: [SYM_TABLE] -> M_decl -> ((String, SYM_VALUE), [SYM_TABLE])
+process_decl st d = case d of
+   M_var (name, arrSize, typ) ->  ((name, Var_attr (0, typ, (count_dim 0 arrSize))), st)
+   where 
+      count_dim n [] = n
+      count_dim n (x:xs) = count_dim (n+1) xs
+        
+--process_stmt :: M_stmt -> ST
 
 
 -- every M_decl node 
