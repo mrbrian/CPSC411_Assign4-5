@@ -10,6 +10,7 @@ import System.Environment
 import AbsMpp
 import SkelMpp
 import AST
+import SymbolTable
 		   
 main = do
     args <- getArgs
@@ -20,6 +21,6 @@ main = do
     case ptree of
         Ok  tree -> do
             let ast = transProg tree
-            putStrLn $ ppShow ast
-            putStrLn $ process ast
+            let st = process ast
+            putStrLn $ ppShow st
         Bad msg-> putStrLn msg

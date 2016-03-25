@@ -188,6 +188,7 @@ process_decls st (d : rest) = (sL:sL', st''++st')
 process_decl :: [SYM_TABLE] -> M_decl -> ((String, SYM_VALUE), [SYM_TABLE])
 process_decl st d = case d of
    M_var (name, arrSize, typ) ->  ((name, Var_attr (0, typ, (count_dim 0 arrSize))), st)
+   M_fun (name,[(pN,pD,pT)],rT,ds,sts) ->  ((name, Fun_attr (0, typ, (count_dim 0 arrSize))), st)
    where 
       count_dim n [] = n
       count_dim n (x:xs) = count_dim (n+1) xs
