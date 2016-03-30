@@ -186,17 +186,12 @@ process_decl n st d = proc_d n st d
        M_data (name, conList) -> st''
          where
            (n, st') = insert n st (DATATYPE name)
-           st'' = insert n st' (CONSTRUCTOR ())
-
-           insertCon dN sT [] = sT
-           insertCon dN sT (c:cs) -> case c of
-              (cName, cTL) = insertCon dN sT' cs
-                where 
-                  sT' = insert 0 sT (CONSTRUCTOR (cName, cTL, dN)) 
-
---	| M_data (String,[(String,[M_type])])  
---       M_var (name, arrSize, typ) -> ((name, Var_attr (0, typ, (count_dim 0 arrSize))), st)
-	   
+           st'' = insertCons name st conList  
+		   
+           insertCons dN sT [] = sT
+           insertCons dN sT ((cName, cTL):cs) = insertCons dN sT' cs
+             where 
+               sT' = snd (insert 0 sT (CONSTRUCTOR (cName, cTL, dN))) 	   
         
 --process_params
 
