@@ -105,24 +105,18 @@ insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE str)
 	   -- constructor#  const type   const Datatype
 insert n symTab (CONSTRUCTOR (cName,cInput,cType))
 	   | in_index_list cName sL = error ("Symbol table error: "++cName++"is already defined.")	   
-	   | otherwise = (n,(Symbol_table(sT, nL,nA,(cName, Con_attr(0,cInput,cType)):sL')):rest)
+	   | otherwise = (n,(Symbol_table(sT, nL,nA,newHead:newSymList)):rest)
 	   where 
-	   ((Symbol_table(sT, nL,nA,sL)) : rest) = symTab
-	   ((sN, sV) : sLrest) = sL
-	   (cName, (Con_attr (count,_,_)) : sVrest) = sV
-	   --sL' = ((Typ_attr ( cName : conList)) : rest')	  
-	   I_TYPE (cL) = look_up symTab cType 					-- get contructor name list
-	   newType = I_TYPE (cName:cL)
-	   
+	   ((Symbol_table(sT, nL,nA,sL)) : rest) = symTab  	-- deconstruct
+	   ((sN, sV) : sLrest) = sL				-- get symbol list
+	   I_TYPE (cL) = look_up symTab cType 			-- get contructor name list
+           newSymList = addCons cName [] sL			-- insert constructor name
+           cNum = (length cL) + 1				-- constructor num
+           newHead = (cName, Con_attr(cNum,cInput,cType))	-- make new symbol
+           -- insert constructor into Typ_attr's list
 	   addCons c preL [] = preL
-	   addCons c preL ((typName, I_TYPE cL):rest) = (preL++[(typName, I_TYPE (c:cL))]++rest)
+	   addCons c preL ((typName, Typ_attr cL):rest) = (preL++[(typName, Typ_attr (c:cL))]++rest)
 	   addCons c preL (a:rest) = addCons c (preL++[a]) rest
-	   
-	   {-
-                  | Con_attr (Int, [M_type], String)
-                  | Typ_attr [String]   collection of constructor names... how to get?
-				  -}
--- ...
 
 -- checks if var is in a symbol table's list
 in_index_list :: String -> [(String, SYM_VALUE)] -> Bool
@@ -189,7 +183,18 @@ process_decl n st d = proc_d n st d
            st'' = new_scope (L_FUN rT) st'
            st''' = add_args n' st'' pL
            st'''' = process_decls n' st''' ds
-           
+       M_data (name, conList) -> st''
+         where
+           (n, st') = insert n st (DATATYPE name)
+           st'' = insert n st' (CONSTRUCTOR ())
+
+           insertCon dN sT [] = sT
+           insertCon dN sT (c:cs) -> case c of
+              (cName, cTL) = insertCon dN sT' cs
+                where 
+                  sT' = insert 0 sT (CONSTRUCTOR (cName, cTL, dN)) 
+
+--	| M_data (String,[(String,[M_type])])  
 --       M_var (name, arrSize, typ) -> ((name, Var_attr (0, typ, (count_dim 0 arrSize))), st)
 	   
         
