@@ -48,36 +48,7 @@ test_st =
     , Symbol_table(L_PROG, 2,0,[ ("x",Var_attr(1,M_int,0))
                        , ("f",Fun_attr("code_label_f",[(M_int,0),(M_int,0)],M_int))
                        , ("v",Var_attr(2,M_int,0))])
-    ]
-{-    [ Symbol_table(L_FUN M_int, 1,2,[ ("a",Var_attr(-5,M_int,0))
-                       , ("b",Var_attr(-4,M_int,0))
-                       , ("y",Var_attr(1,M_int,0))])
-    , Symbol_table(L_FUN M_int, 1,2,[ ("y",Var_attr(-5,M_int,0))
-                       , ("z",Var_attr(-4,M_int,0))
-                       , ("x",Var_attr(1,M_int,0))
-                       , ("a",Var_attr(2,M_int,2))
-                       , ("g",Fun_attr("code_label_g",[(M_int,0),(M_int,2)],M_int))])
-    , Symbol_table(L_PROG, 2,0,[ ("x",Var_attr(1,M_int,0))
-                       , ("f",Fun_attr("code_label_f",[(M_int,0),(M_int,0)],M_int))
-                       , ("v",Var_attr(2,M_int,0))])
-    ]
-
-		[Symbol_table(L_FUN M_int, 3, 2, 
-			[("a", Var_attr(M_int, 2)), 
-			("b", Var_attr(M_int, 0)), 
-			("y", Var_attr(M_int, 0)), 
-			("i", Var_attr(M_int, 0)), 
-			("j", Var_attr(M_int, 0))]),
-		Symbol_table(L_FUN M_int, 2, 2, 
-			[("y", Var_attr(M_int, 0)), 
-			("z", Var_attr(M_int, 0)), 
-			("x", Var_attr(M_int, 0)), 
-			("a", Var_attr(M_int, 2)),
-			("g", Fun_attr("code_label_g", [(M_int, 2), (M_int, 0)], M_int))]),
-		Symbol_table(L_PROG, 1, 0,
-			[("x", Var_attr(M_int, 0)), 
-			("f", Fun_attr("code_label_f", [(M_int, 0), (M_int, 0)], M_int))])]
--}
+    ]	
 
 empty:: ST
 empty = []
@@ -93,6 +64,8 @@ look_up s x = find 0 s
                     =  I_VARIABLE(level,offset,type_,dim)
       found level (Fun_attr(label,arg_Type,type_)) 
                     = I_FUNCTION(level,label,arg_Type,type_)
+      found level (Typ_attr cL) 
+                    = I_TYPE cL
 		{-
                     | I_CONSTRUCTOR (Int,[M_type],String)
                     | I_TYPE [String]
@@ -124,18 +97,30 @@ insert n ((Symbol_table(sT, nL,nA,sL)):rest) (VARIABLE (str,t,dim))
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (FUNCTION (str,ts,t))
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
 	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str,Fun_attr(get_label n "label_fn_",ts,t)):sL)):rest)
-	   {-
-insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE strL)			-- 
+	   
+insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE str)			
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
-	   | otherwise = (n,(Symbol_table(sT, nL+1, nA,(strL, Typ_attr strL):sL)):rest)
+	   | otherwise = (n,(Symbol_table(sT, nL+1, nA,(str, Typ_attr []):sL)):rest)
 	   
 	   -- constructor#  const type   const Datatype
-insert n ((Symbol_table(sT, nL,nA,sL)):rest) (CONSTRUCTOR (cN,cT,cD))
-	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
-	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str, Con_attr(cN,cT,cD)):sL)):rest)
+insert n symTab (CONSTRUCTOR (cName,cInput,cType))
+	   | in_index_list cName sL = error ("Symbol table error: "++cName++"is already defined.")	   
+	   | otherwise = (n,(Symbol_table(sT, nL,nA,(cName, Con_attr(0,cInput,cType)):sL')):rest)
+	   where 
+	   ((Symbol_table(sT, nL,nA,sL)) : rest) = symTab
+	   ((sN, sV) : sLrest) = sL
+	   (cName, (Con_attr (count,_,_)) : sVrest) = sV
+	   --sL' = ((Typ_attr ( cName : conList)) : rest')	  
+	   I_TYPE (cL) = look_up symTab cType 					-- get contructor name list
+	   newType = I_TYPE (cName:cL)
 	   
+	   addCons c preL [] = preL
+	   addCons c preL ((typName, I_TYPE cL):rest) = (preL++[(typName, I_TYPE (c:cL))]++rest)
+	   addCons c preL (a:rest) = addCons c (preL++[a]) rest
+	   
+	   {-
                   | Con_attr (Int, [M_type], String)
-                  | Typ_attr [String]
+                  | Typ_attr [String]   collection of constructor names... how to get?
 				  -}
 -- ...
 
