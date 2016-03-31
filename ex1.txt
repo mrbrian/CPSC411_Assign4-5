@@ -1,0 +1,20 @@
+
+var z:int;
+begin
+  {
+    var z[1]:int;
+    fun f(x:int,y:int):int
+    {
+      begin
+        return y; 
+      end
+    };
+    begin
+      read x;
+    end
+  };
+  read z;
+  z := x + z;
+  w := x - z;
+  print f(x,z);
+end
