@@ -56,7 +56,7 @@ empty = []
 -- what does this do    add a symbol table to the stack?  yes   why diff types?  
 new_scope :: ScopeType -> ST -> ST
 new_scope t s = (Symbol_table(t,0,0,[])) : s
-
+  
 look_up :: ST -> String -> SYM_I_DESC 
 look_up s x = find 0 s 
    where
@@ -77,8 +77,8 @@ look_up s x = find 0 s
       find n [] = error ("Could not find "++ x)
       find n (Symbol_table(_,_,_,vs):rest) =  -- what is vs... variables?  so get the vars of the first ST
              (case find_level vs of         -- does this ST have the var in it?
-	          Just v -> found n v         	-- return as an IVAR or IFUN.
-		  Nothing -> find (n+1) rest) 		-- look at next ST.
+               Just v -> found n v         	-- return as an IVAR or IFUN.
+               Nothing -> find (n+1) rest) 		-- look at next ST.
 
 -- so.  its not a new scope!   so ok yes  inserting a var symbol or something.
 -- n = current function label # ??

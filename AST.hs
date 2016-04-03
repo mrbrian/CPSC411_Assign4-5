@@ -26,4 +26,10 @@ data M_operation = M_fn String | M_add | M_mul | M_sub | M_div | M_neg
                  | M_lt | M_le | M_gt | M_ge | M_eq | M_not | M_and | M_or
                  | M_float | M_floor | M_ceil
            deriving (Eq,Show)
+		   
+isVar :: M_decl -> Bool
+isVar (M_var _) = True
+isVar _ = False
 
+isFun :: M_decl -> Bool
+isFun m = not (isVar m)

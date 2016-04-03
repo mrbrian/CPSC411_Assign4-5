@@ -11,35 +11,32 @@ import AbsMp
 import SkelMp
 import AST
 import SymbolTable
+import Semantic
 		
-process :: M_prog -> ST
-process (M_prog (ds, sts)) = st''
+gen_ST_Prog :: M_prog -> ST
+gen_ST_Prog (M_prog (ds, sts)) = st''
    where
      st   = new_scope L_PROG empty
-     st'  = transDecls 0 st ds
-     st'' = transStmts 0 st' sts
+     st'  = gen_ST_Decls 0 st ds
+     st'' = gen_ST_Stmts 0 st' sts
 
-isVar :: M_decl -> Bool
-isVar (M_var _) = True
-isVar _ = False
-
-transDecls :: Int -> ST -> [M_decl] -> ST
-transDecls n st [] = st
-transDecls n st decls = st''
+gen_ST_Decls :: Int -> ST -> [M_decl] -> ST
+gen_ST_Decls n st [] = st
+gen_ST_Decls n st decls = st''
      where 
         vs = filter (\a -> isVar a) decls
         fs = filter (\a -> not (isVar a)) decls
         (d:rest) = vs++fs
-        st'    = transDecl n st d
-        st''   = transDecls n st' rest
+        st'    = gen_ST_Decl n st d
+        st''   = gen_ST_Decls n st' rest
 
 --   M_fun (String,[(String,Int,M_type)],M_type,[M_decl],[M_stmt]) ->
 --   M_data (String,[(String,[M_type])]) ->
---   ARGUMENT (name, ty, val) -> insert n? (transDecl st d) : (transDecls rest)
+--   ARGUMENT (name, ty, val) -> insert n? (gen_ST_Decl st d) : (gen_ST_Decls rest)
 
 
-transDecl :: Int -> ST -> M_decl -> ST
-transDecl n st d = proc_d n st d
+gen_ST_Decl :: Int -> ST -> M_decl -> ST
+gen_ST_Decl n st d = proc_d n st d
    where
      add_args n st [] = st
      add_args n st ((name, dim, typ):ps) = add_args n' st' ps
@@ -53,26 +50,26 @@ transDecl n st d = proc_d n st d
            (n', st') = insert (n+1) st (FUNCTION (name, [], rT))
            st'' = new_scope (L_FUN rT) st'
            st''' = add_args n' st'' pL
-           st'''' = transDecls n' st''' ds
+           st'''' = gen_ST_Decls n' st''' ds
 
-transStmts :: Int -> ST -> [M_stmt] -> ST
-transStmts n st [] = st 
-transStmts n st (s:rest) = st''
+gen_ST_Stmts :: Int -> ST -> [M_stmt] -> ST
+gen_ST_Stmts n st [] = st 
+gen_ST_Stmts n st (s:rest) = st''
     where
-       st'  = transStmt n st s
-       st'' = transStmts n st' rest
+       st'  = gen_ST_Stmt n st s
+       st'' = gen_ST_Stmts n st' rest
 
-transStmt :: Int -> ST -> M_stmt -> ST
-transStmt n st d = case d of
+gen_ST_Stmt :: Int -> ST -> M_stmt -> ST
+gen_ST_Stmt n st d = case d of
 --M_cond (M_expr, M_stmt,M_stmt) 
 	M_cond (e, s1, s2) -> st''
            where 
-              st' = transStmt n st s1
-              st'' = transStmt n st' s2
+              st' = gen_ST_Stmt n st s1
+              st'' = gen_ST_Stmt n st' s2
 	M_block (decls, stmts) -> st''
            where 
               st' = new_scope L_BLK st
-              st''= transDecls n st' decls
+              st''= gen_ST_Decls n st' decls
 	x -> st
 
 {-	data M_stmt = M_ass (String,[M_expr], M_expr)
@@ -84,25 +81,6 @@ transStmt n st d = case d of
             | M_block ([M_decl],[M_stmt])
 -}
 			
-wf_exp :: M_expr -> ST -> Bool
-wf_exp (M_ival v) _ = True
---wf_exp (M_rval v) _ = True
-wf_exp (M_bval v) _ = True
---wf_exp (M_size (str, v)) _ = True
---wf_exp (M_id (str, es)) st = look_up str st
-{- wf_exp (M_app (_, e)) st = v
-  where
-    map (\a -> wf_exp) 
-	v = wf_exp -}
-wf_exp _  _ = False
-
-{-
-            | M_rval Float
-            | M_bval Bool
-            | M_size (String,Int)
-            | M_id (String,[M_expr])
-            | M_app (M_operation,[M_expr])
-			-}
 main = do
     args <- getArgs
     conts <- readFile (args !! 0)
@@ -112,6 +90,6 @@ main = do
     case ptree of
         Ok  tree -> do
             let ast = transProg tree
-            let st = process ast
+            let st = gen_ST_Prog ast
             putStrLn $ ((ppShow ast) ++ "\n\n" ++ (ppShow st))
         Bad msg-> putStrLn msg
