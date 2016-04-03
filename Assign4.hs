@@ -75,31 +75,35 @@ transStmt n st d = case d of
               st''= transDecls n st' decls
 	x -> st
 
-wf_exp :: M_stmt -> ST -> Bool
-	data M_stmt = M_ass (String,[M_expr], M_expr)
+{-	data M_stmt = M_ass (String,[M_expr], M_expr)
             | M_while (M_expr, M_stmt)
             | M_cond (M_expr, M_stmt,M_stmt) 
             | M_read (String, [M_expr])
             | M_print (M_expr)
             | M_return (M_expr)
             | M_block ([M_decl],[M_stmt])
-
+-}
 			
 wf_exp :: M_expr -> ST -> Bool
 wf_exp (M_ival v) _ = True
 wf_exp (M_rval v) _ = True
 wf_exp (M_bval v) _ = True
 wf_exp (M_size (str, v)) _ = True
-wf_exp (M_id (str, es) st = look_up str st
-wf_exp (M_app (_, e)) st = wf_exp e st
-  
+wf_exp (M_id (str, es)) st = look_up str st
+wf_exp (M_app (_, e)) st = v
+  where
+    map (\a -> wf_exp) 
+	v = wf_exp
+wf_exp e st  
 wf_exp _  _ = False
 
+{-
             | M_rval Float
             | M_bval Bool
             | M_size (String,Int)
             | M_id (String,[M_expr])
             | M_app (M_operation,[M_expr])
+			-}
 main = do
     args <- getArgs
     conts <- readFile (args !! 0)
