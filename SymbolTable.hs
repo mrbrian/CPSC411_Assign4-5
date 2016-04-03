@@ -96,7 +96,7 @@ insert n ((Symbol_table(sT, nL,nA,sL)):rest) (VARIABLE (str,t,dim))
 	   
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (FUNCTION (str,ts,t))
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
-	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str,Fun_attr(get_label n "label_fn_",ts,t)):sL)):rest)
+	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str,Fun_attr(get_label n "fn",ts,t)):sL)):rest)
 	   
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE str)			
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")

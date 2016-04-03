@@ -1,0 +1,27 @@
+let x = new_scope L_PROG empty
+let y = insert 0 x (DATATYPE "intlist")
+let z = insert 0 (snd y) (CONSTRUCTOR ("CON", [M_int], "intlist"))
+let a = insert 0 (snd z) (CONSTRUCTOR ("CON2", [M_int,M_real], "intlist"))
+let b = new_scope 1 (FUNCTION ("x", [()])
+
+
+let y = insert 0 x (VARIABLE ("x", 3, M_int))
+wf_expr (M_id ("x", [M_ival 5])) empty
+wf_expr (M_id ("x", [M_ival 5])) y
+
+let y = insert 0 x (VARIABLE ("x", 3, M_int))
+
+
+size test
+
+bad
+let x = new_scope L_PROG empty
+let y = (snd (insert 0 x (VARIABLE ("x", M_int, 0))))
+wf_expr (M_size ("x", 1)) y
+
+good
+let x = new_scope L_PROG empty
+let y = (snd (insert 0 x (VARIABLE ("x", M_int, 2))))
+wf_expr (M_size ("x", 1)) y
+
+

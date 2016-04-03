@@ -4,8 +4,10 @@ import AST
 import SymbolTable
 
 data I_prog = I_PROG ([I_fbody],Int,[(Int,[I_expr])],[I_stmt])
+           deriving (Eq,Show)
 		-- functions, number of local variables, array descriptions, body.
 data I_fbody = I_FUN (String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
+           deriving (Eq,Show)
 		-- functions, number of local variables, number of arguments
 		-- array descriptions, body
 data I_stmt = I_ASS (Int,Int,[I_expr],I_expr)
@@ -27,6 +29,7 @@ data I_stmt = I_ASS (Int,Int,[I_expr],I_expr)
 		| I_PRINT_C I_expr   -} 
 		| I_RETURN I_expr
 		| I_BLOCK ([I_fbody],Int,[(Int,[I_expr])],[I_stmt])
+           deriving (Eq,Show)
 		-- functions, number of local variables, array descriptions, body.
 data I_expr = I_IVAL Int
 		| I_RVAL Float
@@ -39,6 +42,7 @@ data I_expr = I_IVAL Int
 		-- for passing an array reference as an argument
 		-- of a function: level, offset
 		| I_SIZE (Int,Int,Int)
+           deriving (Eq,Show)
 		-- for retrieving the dimension of an array: level,offset,dimension
 data I_opn = I_CALL (String,Int)
 		-- label and level
@@ -50,15 +54,11 @@ data I_opn = I_CALL (String,Int)
 		| I_LT_F  | I_LE_F  | I_GT_F  | I_GE_F  | I_EQ_F
 		| I_LT_C  | I_LE_C  | I_GT_C  | I_GE_C  | I_EQ_C
 		| I_NOT | I_AND | I_OR | I_FLOAT | I_FLOOR | I_CEIL
+           deriving (Eq,Show)
 		
 --([I_fbody],Int,[(Int,[I_expr])],[I_stmt])
 
 {-
-transProg :: M_prog -> I_prog
-transProg a = I_PROG (fs, nv, arrs, body)
-	where
-		st = gen_ST_Prog a
-	-}	
 		
 isArg_arg :: (M_type, Int) -> Bool
 isArg_arg (_, n) = n < 0
@@ -74,18 +74,22 @@ isFun_sym (str, Fun_attr _) = True
 isFun_sym _ = False
 
 transProg :: M_prog -> I_prog
-transProg (M_prog (ds, stmts)) = I_PROG (fs, nv, [],[])--arrs, body)
+transProg p = I_PROG (fs, nv, arrs, body)
 	where
-		(n, st) = transDecls 0 ds 		-- make symbol table using decs.
-		Symbol_table (sctyp, nv, na, syms) = tail st
-		{-fs = filter isFun_sym syms          -- get SYM_VALUES
+		M_prog (ds, stmts) = p
+		((Symbol_table (sctyp, nv, na, syms)) : []) = gen_ST_prog p
 		
-		(n', fs') = transFuns n fs []   -- get main level functions from the st.
+		body = transStmts stmts
+		arrs = transStmts stmts
+		
+		fs = filter isFun_sym syms          -- get SYM_VALUES
+		
+		(n', fs') = transFuns fs    -- get main level functions from the st.
 		
 		arrs = filter isArray_sym syms
 		body = transStmts n stmts st
 
-transFuns :: [SYM_DESC] -> ST -> [I_fbody]
+transFuns :: [SYM_DESC] -> [I_fbody]
 transFuns [] st = []
 transFuns (f:fs) st = f':fs'
 	where
@@ -105,7 +109,7 @@ transFun (FUNCTION (label, args, rt)) st = I_FUN (label, locfuns, nv, na, args, 
 		(Symbol_table (sctyp, nv', na', syms):rest) = st
 		locfuns = filter isFun_sym syms 
 		stmts = transStmts st  -- .. stmts of the function.  ARE NOT IN SYMBOL TABLE.
-		-}
+		
 transStmts :: Int -> [M_stmt] -> ST -> (Int, [I_stmt], ST)
 transStmts n [] st = (n, [], st)
 transStmts n (stmt:stmts) st = v
@@ -242,26 +246,4 @@ transOper op e st = case op of
 	M_floor  -> I_FLOOR
 	M_ceil   -> I_CEIL
 				 
-		 
-		 
-		 
-		
-		
-		 
-		 
-		 
-		 
-		
-		  
-		  
-		  
-		 
-		
-		 
-		 
-		
-		
-	
-
-
-
+		 -}

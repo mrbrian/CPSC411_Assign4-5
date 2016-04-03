@@ -12,46 +12,20 @@ import SkelMp
 import AST
 import SymbolTable
 --import Semantic
-import IR
-
-transFuns :: [M_decl] -> ST -> [I_fbody]
-transFuns [] st = []
-transFuns (d:ds) st = (transFun d st):(transFuns ds st)
-
-transFun :: M_decl -> ST -> I_fbody
-transFun (M_fun (fn, fas, frt, fds, fsts)) st =  I_FUN (fL, fbs', fnv, fna, farrs, fstmts)
-	where
-		I_FUNCTION (flvl, fL, fargs, frt) = look_up st fn
-		fbs = filter isFun fds   				-- look for funs inside..
-		fbs' = transFuns fbs st
-		fvs = filter isVar fds
-		fnv = length fvs
-		fna = length fas
-		fstmts = transStmts fsts
-		farrs = []
 		
-gen_ST_Prog :: M_prog -> I_prog
-gen_ST_Prog (M_prog (ds, sts)) = I_PROG (fs', nv, [], [])
+gen_ST_Prog :: M_prog -> ST
+gen_ST_Prog (M_prog (ds, sts)) = st''
    where
-     st  = new_scope L_PROG empty
+     st   = new_scope L_PROG empty
      st'  = gen_ST_Decls 0 st ds
-	 
-     vs = filter isVar ds
-	 
-     nv = length vs
-     --arrs = isArray vs
-	 
-     fs = filter isFun ds
-     fs' = transFuns fs st'
      st'' = gen_ST_Stmts 0 st' sts
-    
 
 gen_ST_Decls :: Int -> ST -> [M_decl] -> ST
 gen_ST_Decls n st [] = st
 gen_ST_Decls n st decls = st''
      where 
-        vs = filter isVar decls
-        fs = filter isFun decls
+        vs = filter (\a -> isVar a) decls
+        fs = filter (\a -> not (isVar a)) decls
         (d:rest) = vs++fs
         st'    = gen_ST_Decl n st d
         st''   = gen_ST_Decls n st' rest
@@ -77,9 +51,7 @@ gen_ST_Decl n st d = proc_d n st d
            st'' = new_scope (L_FUN rT) st'
            st''' = add_args n' st'' pL
            st'''' = gen_ST_Decls n' st''' ds
-		   --I_FUN ("fn"++(show (n+1)), locfuns, nv, na, arrs, body)
-		   --locfuns = filter funs.
-		   
+
 gen_ST_Stmts :: Int -> ST -> [M_stmt] -> ST
 gen_ST_Stmts n st [] = st 
 gen_ST_Stmts n st (s:rest) = st''
@@ -118,6 +90,6 @@ main = do
     case ptree of
         Ok  tree -> do
             let ast = transProg tree
-            let st = gen_ST_Prog ast 
+            let st = gen_ST_Prog ast
             putStrLn $ ((ppShow ast) ++ "\n\n" ++ (ppShow st))
         Bad msg-> putStrLn msg

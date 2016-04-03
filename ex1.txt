@@ -1,10 +1,24 @@
-
+ fun w(x1:int,y1:int):int
+    {
+      begin
+        return y1; 
+      end
+    };
+	
 var z:int;
 begin
   {
     var z[1]:int;
     fun f(x:int,y:int):int
     {
+	
+	 fun u(x:int,y:int):int
+    {
+      begin
+        return y; 
+      end
+    };
+	
       begin
         return y; 
       end
