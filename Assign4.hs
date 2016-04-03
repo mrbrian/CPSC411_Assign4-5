@@ -27,11 +27,18 @@ transFun (M_fun (fn, fas, frt, fds, fsts)) st =  I_FUN (fL, fbs', fnv, fna, farr
 		fvs = filter isVar fds
 		fnv = length fvs
 		fna = length fas
-		fstmts = transStmts fsts
+		fstmts = transStmts fsts st
 		farrs = []
 		
+transArray :: M_decl -> ST -> (Int, [I_expr])
+transArray (M_var (name, es, typ)) st = v
+	where
+		I_VARIABLE (lvl,off,typ,dim) = look_up st name   --I_VARIABLE (Int,Int,M_type,Int)
+		es' = transExprs es st
+		v = (off, es')
+	 
 gen_ST_Prog :: M_prog -> I_prog
-gen_ST_Prog (M_prog (ds, sts)) = I_PROG (fs', nv, [], [])
+gen_ST_Prog (M_prog (ds, sts)) = I_PROG (fs', nv, arrs', [])
    where
      st  = new_scope L_PROG empty
      st'  = gen_ST_Decls 0 st ds
@@ -39,7 +46,8 @@ gen_ST_Prog (M_prog (ds, sts)) = I_PROG (fs', nv, [], [])
      vs = filter isVar ds
 	 
      nv = length vs
-     --arrs = isArray vs
+     arrs = filter isArray vs  -- M_var (String,[M_expr],M_type)
+     arrs' = map (\a -> transArray a st') arrs    -- (Int,[I_expr])
 	 
      fs = filter isFun ds
      fs' = transFuns fs st'

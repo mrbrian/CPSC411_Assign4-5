@@ -33,3 +33,6 @@ isVar _ = False
 
 isFun :: M_decl -> Bool
 isFun m = not (isVar m)
+
+isArray :: M_decl -> Bool
+isArray (M_var (a,b,c)) = (length b) > 0

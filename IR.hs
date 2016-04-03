@@ -247,3 +247,113 @@ transOper op e st = case op of
 	M_ceil   -> I_CEIL
 				 
 		 -}
+	
+transStmts :: [M_stmt] -> ST -> [I_stmt]
+transStmts [] st = []
+transStmts (stmt:stmts) st = v
+	where  
+		stmt' = transStmt stmt st
+		stmts' = transStmts stmts st
+		v = stmt':stmts'
+	 
+		 
+transStmt ::M_stmt -> ST -> I_stmt
+transStmt stmt st = case stmt of
+	{-M_ass (name, arrs, exp) -> (n, I_ASS (lvl, off, arrs', exp'), st)
+		where 
+			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
+			arrs' = transExprs arrs st
+			exp' = transExpr exp st	
+	M_while (exp, stmt) -> (n', I_WHILE (exp', stmt'), st')
+		where
+			exp' = transExpr exp st
+			(n', stmt', st') = transStmt n stmt st	
+	M_cond (e, s1, s2) -> (n'', I_COND (e', s1', s2'), st'')
+		where
+			e' = transExpr e st
+			(n', s1', st') = transStmt n s1 st
+			(n'', s2', st'') = transStmt n' s2 st'
+		-}
+	M_read (name, arrs) -> (case typ of
+			M_int  -> (n, I_READ_I loc, st)
+			M_bool -> (n, I_READ_B loc, st)
+			M_real -> (n, I_READ_F loc, st))
+		where
+			(I_VARIABLE (lvl, off, typ, _)) = look_up st name
+			arrs' = transExprs arrs st
+			loc = (lvl, off, arrs')
+	M_print (e) -> (case e of 
+		M_ival v -> (n, I_PRINT_I (I_IVAL (fromIntegral v)), st)
+		M_rval v -> (n, I_PRINT_F (I_RVAL v), st)
+		M_bval v -> (n, I_PRINT_B (I_BVAL v), st))	 -- ... expression????
+	M_return (e) -> I_RETURN e'
+		where
+			e' = transExpr e st
+			
+transExprs :: [M_expr] -> ST -> [I_expr]
+transExprs [] st = []
+transExprs (e:es) st = ies
+	where		
+		ies = (transExpr e st):(transExprs es st)
+
+transExpr :: M_expr -> ST -> I_expr
+transExpr e st = case e of
+	M_ival v -> I_IVAL (fromIntegral v) 
+	M_rval v -> I_RVAL v 
+	M_bval v -> I_BVAL v 
+	M_size (str, dim) -> I_SIZE (lvl, off, dim)
+		where 
+			(I_VARIABLE (lvl, off, _, dim)) = look_up st str
+	M_id (str, es) -> I_ID (lvl, off, es')
+		where
+			(I_VARIABLE (lvl, off, _, dim)) = look_up st str
+			es' = transExprs es st
+	--M_app (op, es)  -> I_REF (op', es')   what about this one
+	M_app (op, ess) -> I_APP (op', ess')
+		where
+			(e:es) = ess
+			op' = transOper op e st
+			ess' = transExprs (ess) st
+
+			
+transOper :: M_operation -> M_expr -> ST -> I_opn
+transOper op e st = case op of
+	M_fn str ->  I_CALL	(label, lvl)
+		where (I_FUNCTION (lvl, label, _, _)) = look_up st str
+		--  | I_CONS (Int,Int)  m++
+	M_add    -> (case e of 
+		M_ival v -> I_ADD_I
+		M_rval v -> I_ADD_F)
+	M_mul    -> (case e of 
+		M_ival v -> I_MUL_I
+		M_rval v -> I_MUL_F)
+	M_sub    -> (case e of
+		M_ival v -> I_SUB_I
+		M_rval v -> I_SUB_F)
+	M_div    -> (case e of
+		M_ival v -> I_DIV_I
+		M_rval v -> I_DIV_F)
+	M_neg    -> (case e of
+		M_ival v -> I_DIV_I
+		M_rval v -> I_DIV_F)
+	M_lt     -> (case e of
+		M_ival v -> I_LT_I
+		M_rval v -> I_LT_F)
+	M_le     -> (case e of
+		M_ival v -> I_LE_I
+		M_rval v -> I_LE_F)
+	M_gt     -> (case e of
+		M_ival v -> I_GT_I
+		M_rval v -> I_GT_F)
+	M_ge     -> (case e of
+		M_ival v -> I_GE_I
+		M_rval v -> I_GE_F)
+	M_eq     -> (case e of
+		M_ival v -> I_EQ_I
+		M_rval v -> I_EQ_F)
+	M_not    -> I_NOT
+	M_and    -> I_AND
+	M_or     -> I_OR
+	M_float  -> I_FLOAT
+	M_floor  -> I_FLOOR
+	M_ceil   -> I_CEIL

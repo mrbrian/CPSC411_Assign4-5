@@ -2,19 +2,13 @@
     {
 	var x2[2]:int;
 	
-	 fun d(y2:int):int
-    {
       begin
-        return y1; 
+        return x1; 
       end
     };
 	
-      begin
-        return y1; 
-      end
-    };
-	
-var z:int;
+var z[3]:int;
+var d[2]:int;
 begin
   {
     var z[1]:int;
@@ -41,3 +35,4 @@ begin
   w := x - z;
   print f(x,z);
 end
+

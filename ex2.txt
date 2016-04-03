@@ -1,4 +1,19 @@
-var aaaa[2]:int;
-begin
-	print a;
-end
+I_PROG
+
+([I_FUN
+("fn1"
+,[]                       -- no local function
+,1                        -- one local variable
+,1                        -- one argument
+,[I_COND(IAPP (IEQ,[I_ID(0,-4,[]),I_IVAL 0])
+,I_ASS(0,1,I_IVAL 1)
+,I_ASS(0,1,I_APP(I_MUL_I,[I_ID(1,1,[])
+,I_APP(I_CALL ("fn1",1),[I_APP(I_SUB,[I_ID(0,-4,[])
+,I_IVAL 1])])])))
+,I_RETURN (I_ID(0,1 []))
+])]
+,2           -- two local variables
+,[I_READ_I (0,1,[])
+,I_READ_I (0,2,[])
+,I_PRINT_I(I_APP (I_CALL ("fn1",0),[I_ID(0,2,[])]))
+])
