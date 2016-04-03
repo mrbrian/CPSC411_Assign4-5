@@ -86,15 +86,14 @@ transStmt n st d = case d of
 			
 wf_exp :: M_expr -> ST -> Bool
 wf_exp (M_ival v) _ = True
-wf_exp (M_rval v) _ = True
+--wf_exp (M_rval v) _ = True
 wf_exp (M_bval v) _ = True
-wf_exp (M_size (str, v)) _ = True
-wf_exp (M_id (str, es)) st = look_up str st
-wf_exp (M_app (_, e)) st = v
+--wf_exp (M_size (str, v)) _ = True
+--wf_exp (M_id (str, es)) st = look_up str st
+{- wf_exp (M_app (_, e)) st = v
   where
     map (\a -> wf_exp) 
-	v = wf_exp
-wf_exp e st  
+	v = wf_exp -}
 wf_exp _  _ = False
 
 {-
