@@ -53,61 +53,111 @@ data I_opn = I_CALL (String,Int)
 		
 --([I_fbody],Int,[(Int,[I_expr])],[I_stmt])
 
+{-
+transProg :: M_prog -> I_prog
+transProg a = I_PROG (fs, nv, arrs, body)
+	where
+		st = gen_ST_Prog a
+	-}	
+		
+isArg_arg :: (M_type, Int) -> Bool
+isArg_arg (_, n) = n < 0
+
+isVar_arg :: (M_type, Int) -> Bool
+isVar_arg (_, n) = n > 0
+
+isArray_sym :: (String, SYM_VALUE) -> Bool
+isArray_sym (str, Var_attr (off, typ, dim)) = dim > 0
+
+isFun_sym :: (String, SYM_VALUE) -> Bool
+isFun_sym (str, Fun_attr _) = True
+isFun_sym _ = False
 
 transProg :: M_prog -> I_prog
-transProg (M_prog (ds, stmts)) = I_PROG (fs, nv, arrs, body)
+transProg (M_prog (ds, stmts)) = I_PROG (fs, nv, [],[])--arrs, body)
 	where
-		st = transDecls ds -- ...  but what if it recurses?  take the tail
+		(n, st) = transDecls 0 ds 		-- make symbol table using decs.
 		Symbol_table (sctyp, nv, na, syms) = tail st
-		fs = filter isFun syms
-		arrs = filter isVar syms
-		body = transStmts stmts  
+		{-fs = filter isFun_sym syms          -- get SYM_VALUES
+		
+		(n', fs') = transFuns n fs []   -- get main level functions from the st.
+		
+		arrs = filter isArray_sym syms
+		body = transStmts n stmts st
 
-transStmts :: Int -> [M_stmt] -> ST -> (Int, [I_stmt])
-transStmts n stmts st = v
+transFuns :: [SYM_DESC] -> ST -> [I_fbody]
+transFuns [] st = []
+transFuns (f:fs) st = f':fs'
+	where
+		f' = transFun f st
+		fs' = transFuns fs st
+	
+transFun :: SYM_DESC -> ST -> I_fbody
+transFun (FUNCTION (label, args, rt)) st = I_FUN (label, locfuns, nv, na, args, stmts)
+	where
+		-- Fun_attr (String,[(M_type,Int)],M_type)
+		
+		-- I_FUN (String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
+		nv = length (filter isVar_arg args)
+		na = length (filter isArg_arg args)
+		--locfuns = length (filter isFun args)   -- how to find???
+		
+		(Symbol_table (sctyp, nv', na', syms):rest) = st
+		locfuns = filter isFun_sym syms 
+		stmts = transStmts st  -- .. stmts of the function.  ARE NOT IN SYMBOL TABLE.
+		-}
+transStmts :: Int -> [M_stmt] -> ST -> (Int, [I_stmt], ST)
+transStmts n [] st = (n, [], st)
+transStmts n (stmt:stmts) st = v
 	where  
-		v = map transStmt n stmts
+		(n', stmt', st') = transStmt n stmt st
+		(n'', stmts', st'') = transStmts n' stmts st'
+		v = (n'', stmt':stmts', st'')
 
-transStmt :: Int -> M_stmt -> ST -> (Int, I_stmt)
+transStmt :: Int -> M_stmt -> ST -> (Int, I_stmt, ST)
 transStmt n stmt st = case stmt of
-	M_ass (name, arrs, exp) -> I_ASS (lvl, off, arrs', exp')
+	M_ass (name, arrs, exp) -> (n, I_ASS (lvl, off, arrs', exp'), st)
 		where 
 			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
-			arrs' = transExprs arrs
-			exp' = transExpr exp		
-	M_while (exp, stmt) -> I_WHILE (exp', stmt')
+			arrs' = transExprs arrs st
+			exp' = transExpr exp st	
+	M_while (exp, stmt) -> (n', I_WHILE (exp', stmt'), st')
 		where
-			exp' = transExpr exp
-			stmt' = transStmt stmt		
-	M_cond (e, s1, s2) -> I_COND (e', s1', s2')
+			exp' = transExpr exp st
+			(n', stmt', st') = transStmt n stmt st	
+	M_cond (e, s1, s2) -> (n'', I_COND (e', s1', s2'), st'')
 		where
-			e' = transExpr e
-			s1' = transStmt s1
-			s2' = transStmt s2		
+			e' = transExpr e st
+			(n', s1', st') = transStmt n s1 st
+			(n'', s2', st'') = transStmt n' s2 st'
 	M_read (name, arrs) -> (case typ of
-			M_int  -> I_READ_I loc
-			M_bool -> I_READ_B loc
-			M_real -> I_READ_F loc)
+			M_int  -> (n, I_READ_I loc, st)
+			M_bool -> (n, I_READ_B loc, st)
+			M_real -> (n, I_READ_F loc, st))
 		where
 			(I_VARIABLE (lvl, off, typ, _)) = look_up st name
-			arrs' = transExprs arrs
+			arrs' = transExprs arrs st
 			loc = (lvl, off, arrs')
 	M_print (e) -> (case e of 
-		M_ival v -> I_PRINT_I v
-		M_rval v -> I_PRINT_F v
-		M_bval v -> I_PRINT_B v)	  
-	M_return (e) -> I_RETURN e'
+		M_ival v -> (n, I_PRINT_I (I_IVAL (fromIntegral v)), st)
+		M_rval v -> (n, I_PRINT_F (I_RVAL v), st)
+		M_bval v -> (n, I_PRINT_B (I_BVAL v), st))	 -- ... expression???? 
+	M_return (e) -> (n, I_RETURN e', st)
 		where
-			e' = transExpr e
-	M_block (decls, stmts) -> I_BLOCK (fs', nv, vars, stmts')
+			e' = transExpr e st
+			{-
+	M_block (decls, stmts) -> (n''', I_BLOCK (fs', nv, vars', stmts'))
 		where  
 			vs = filter isVar decls
-			nv = length vs
-			vars = transDecls n vs st
+			--nv = length vs
+			(n', st') = transDecls n vs st
+			(st1':strest') = st'
+			Symbol_table (sc, nv, na, syms) = st1'
+			vars' = map (\(M_var (name, es, typ)) -> (, transExprs es st')) vs
 			fs = filter isFun decls
-			(n', fs') = transDecls n fs st
-			stmts' = transStmts n' stmts st
-			
+			(n'', fs') = transDecls n' fs st
+			(n''', stmts') = transStmts n'' stmts st
+			-}
 transDecls :: Int -> [M_decl] -> ST -> (Int, ST)
 transDecls n [] st = (n, st)
 transDecls n (d:ds) st = (n'', st'')

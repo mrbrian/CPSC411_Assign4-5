@@ -11,7 +11,7 @@ import AbsMp
 import SkelMp
 import AST
 import SymbolTable
-import Semantic
+--import Semantic
 		
 gen_ST_Prog :: M_prog -> ST
 gen_ST_Prog (M_prog (ds, sts)) = st''
