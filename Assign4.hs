@@ -18,7 +18,7 @@ gen_ST_Prog :: M_prog -> I_prog
 gen_ST_Prog (M_prog (ds, sts)) = IPROG (fs', nv, arrs', sts')
    where
      st  = new_scope L_PROG empty
-     st'  = gen_ST_Decls 0 st ds
+     (n, st')  = gen_ST_Decls 0 st ds
 	 
      vs = filter isVar ds
 	 
@@ -28,26 +28,20 @@ gen_ST_Prog (M_prog (ds, sts)) = IPROG (fs', nv, arrs', sts')
 	 
      fs = filter isFun ds
      fs' = transFuns fs st'
-     st'' = gen_ST_Stmts 0 st' sts
+     st'' = gen_ST_Stmts n st' sts
      sts' = transStmts sts st''
-    
 
-gen_ST_Decls :: Int -> ST -> [M_decl] -> ST
-gen_ST_Decls n st [] = st
-gen_ST_Decls n st decls = st''
+gen_ST_Decls :: Int -> ST -> [M_decl] -> (Int, ST)
+gen_ST_Decls n st [] = (n, st)
+gen_ST_Decls n st decls = (n'', st'')
      where 
         vs = filter isVar decls
         fs = filter isFun decls
         (d:rest) = vs++fs
-        st'    = gen_ST_Decl n st d
-        st''   = gen_ST_Decls n st' rest
+        (n', st')   = gen_ST_Decl n st d
+        (n'', st'') = gen_ST_Decls n' st' rest
 
---   M_fun (String,[(String,Int,M_type)],M_type,[M_decl],[M_stmt]) ->
---   M_data (String,[(String,[M_type])]) ->
---   ARGUMENT (name, ty, val) -> insert n? (gen_ST_Decl st d) : (gen_ST_Decls rest)
-
-
-gen_ST_Decl :: Int -> ST -> M_decl -> ST
+gen_ST_Decl :: Int -> ST -> M_decl -> (Int, ST)
 gen_ST_Decl n st d = proc_d n st d
    where
      add_args n st [] = st
@@ -55,16 +49,14 @@ gen_ST_Decl n st d = proc_d n st d
        where (n', st') = insert n st (ARGUMENT (name, typ, dim)) 
 	 
      proc_d n st d = case d of
-       M_var (name, arrSize, typ) -> st'
+       M_var (name, arrSize, typ) -> (n, st')
 	     where (fn, st') = insert n st (VARIABLE (name, typ, length arrSize))     
-       M_fun (name,pL,rT,ds,_) -> st''''
+       M_fun (name,pL,rT,ds,_) -> (n'', st'''')
          where 
            (n', st') = insert (n+1) st (FUNCTION (name, [], rT))
            st'' = new_scope (L_FUN rT) st'
            st''' = add_args n' st'' pL
-           st'''' = gen_ST_Decls n' st''' ds
-		   --I_FUN ("fn"++(show (n+1)), locfuns, nv, na, arrs, body)
-		   --locfuns = filter funs.
+           (n'', st'''') = gen_ST_Decls n' st''' ds
 		   
 gen_ST_Stmts :: Int -> ST -> [M_stmt] -> ST
 gen_ST_Stmts n st [] = st 
@@ -75,7 +67,6 @@ gen_ST_Stmts n st (s:rest) = st''
 
 gen_ST_Stmt :: Int -> ST -> M_stmt -> ST
 gen_ST_Stmt n st d = case d of
---M_cond (M_expr, M_stmt,M_stmt) 
 	M_cond (e, s1, s2) -> st''
            where 
               st' = gen_ST_Stmt n st s1
@@ -83,17 +74,9 @@ gen_ST_Stmt n st d = case d of
 	M_block (decls, stmts) -> st''
            where 
               st' = new_scope L_BLK st
-              st''= gen_ST_Decls n st' decls
+              (n', st'') = gen_ST_Decls n st' decls
 	x -> st
 
-{-	data M_stmt = M_ass (String,[M_expr], M_expr)
-            | M_while (M_expr, M_stmt)
-            | M_cond (M_expr, M_stmt,M_stmt) 
-            | M_read (String, [M_expr])
-            | M_print (M_expr)
-            | M_return (M_expr)
-            | M_block ([M_decl],[M_stmt])
--}
 			 
 main = do
     args <- getArgs

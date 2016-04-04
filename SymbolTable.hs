@@ -128,7 +128,7 @@ in_index_list str ((x,_):xs)
 
 -- whats the number for?
 get_label :: Int -> String -> String
-get_label n str = str ++ (show n) --error "not implemented"
+get_label n str = str ++ (show n) 
 
 -- just popping off the top scope?   
 remove_scope :: ST -> (Int, ST)

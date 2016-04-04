@@ -52,6 +52,8 @@ data I_expr = IINT      Int
 data I_opn = ICALL      (String,Int)
            | IADD_F | IMUL_F | ISUB_F | IDIV_F | INEG_F
            | ILT_F  | ILE_F  | IGT_F  | IGE_F  | IEQ_F   -- operations for floats
+           | IADD_I | IMUL_I | ISUB_I | IDIV_I | INEG_I
+           | ILT_I  | ILE_I  | IGT_I  | IGE_I  | IEQ_I   -- operations for floats
            | IADD | IMUL | ISUB | IDIV | INEG
            | ILT  | ILE  | IGT  | IGE  | IEQ 
            | INOT | IAND | IOR | IFLOAT | ICEIL |IFLOOR
@@ -184,8 +186,12 @@ transOper op e st = case op of
 	M_fn str ->  ICALL	(label, lvl)
 		where 
 			(I_FUNCTION (lvl, label, _, _)) = look_up st str
-	M_add    -> IADD_F
-	M_mul    -> IMUL_F
+	M_add    -> (case e of
+		M_ival v -> IADD_I
+		M_rval v -> IADD_F)
+	M_mul    -> (case e of
+		M_ival v -> IMUL_I
+		M_rval v -> IMUL_F)
 	M_sub    -> ISUB_F
 	M_div    -> IDIV_F
 	M_neg    -> INEG
