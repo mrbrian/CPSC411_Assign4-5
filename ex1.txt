@@ -23,6 +23,7 @@ begin
 	
 	 fun u(x:int,y:int):int
     {
+	var xa2[2]:int; 
       begin
         return y; 
       end

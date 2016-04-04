@@ -14,163 +14,77 @@ import SymbolTable
 --import Semantic
 import IR
 
--- The fold function for expressions
-{-
-
---  Success or fail datatype
-data SF a = FF | SS a
-     deriving (Show,Eq)
-
--- Expression datatype
-data Exp a b = Var b
-             | Opn a [Exp a b]
-     deriving (Show,Eq)
-
--- Basic operations which are available
-data Opn = AND|ADD|OR|MUL|GEQ
-     deriving (Show,Eq)
-
--- Basic types
-data TYPE = INT|BOOL
-     deriving (Show,Eq)
-
--- Symbol table type
-type ST = [(String,TYPE)]
-
-
--- The fold function for expressions
-foldexp:: (b -> c) -> (a -> [c] -> c) -> (Exp a b) -> c
-foldexp f g (Var b) = f b
-foldexp f g (Opn a as) = g a (map (foldexp f g) as) 
-
--}
-data IR_Val = PROG_VAL ([I_fbody],Int,[(Int,[I_expr])],[I_stmt])
-			| FUN_VAL (String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
-           deriving (Eq,Show)
-
-		   
 gen_ST_Prog :: M_prog -> I_prog
-gen_ST_Prog (M_prog (ds, sts)) = I_PROG (fs', nv, arrs', sts')
+gen_ST_Prog (M_prog (ds, sts)) = IPROG (fs', nv, arrs', sts')
    where
      st  = new_scope L_PROG empty
-     pv = PROG_VAL ([],0,[],[])
-     (n', st', progval)  = gen_ST_Decls 0 st ds pv
+     st'  = gen_ST_Decls 0 st ds
 	 
      vs = filter isVar ds
 	 
      nv = length vs
-     arrs = filter isArray vs  					-- M_var (String,[M_expr],M_type)
-     arrs' = map (\a -> transArray a st') arrs  -- (Int,[I_expr])
+     arrs = filter isArray vs  -- M_var (String,[M_expr],M_type)
+     arrs' = map (\a -> transArray a st') arrs    -- (Int,[I_expr])
 	 
      fs = filter isFun ds
      fs' = transFuns fs st'
-     (n'', st'', progval') = gen_ST_Stmts n' st' sts
-     sts' = transStmts sts st'
+     st'' = gen_ST_Stmts 0 st' sts
+     sts' = transStmts sts st''
     
 
-transFuns :: [M_decl] -> ST -> [I_fbody]
-transFuns [] st = []
-transFuns (d:ds) st = (transFun d st):(transFuns ds st)
-
-transFun :: M_decl -> ST -> I_fbody
-transFun (M_fun (fn, fas, frt, fds, fsts)) st =  I_FUN (fL, fbs', fnv, fna, farrs, fstmts)
-	where		
-		I_FUNCTION (flvl, fL, fargs, frt) = look_up st fn
-		fbs = filter isFun fds   						-- look for funs inside..
-		fbs' = transFuns fbs st
-		fvs = filter isVar fds
-		fnv = length fvs
-		fna = length fas
-		fstmts = transStmts fsts st
-		farrs = []
-		
-transArray :: M_decl -> ST -> (Int, [I_expr])
-transArray (M_var (name, es, typ)) st = v
-	where
-		I_VARIABLE (lvl,off,typ,dim) = look_up st name   --I_VARIABLE (Int,Int,M_type,Int)
-		es' = transExprs es st
-		v = (off, es')
-	 {-
-transDecls :: Int -> [M_decl] -> ST -> IR_Val
-transDecls n [] st = 
-transDecls n (d:ds) st = v
-	where
-		st' = gen_ST_decl d st  -- update the ST
-		v = transDecl d st' 	-- update the IR
--}
-
-gen_ST_Decls :: Int -> ST -> [M_decl] -> IR_Val -> (Int, ST, IR_Val)
-gen_ST_Decls n st [] ir_v = (n, st, ir_v)
-gen_ST_Decls n st decls ir_v = (n'', st'', ir_v'')
+gen_ST_Decls :: Int -> ST -> [M_decl] -> ST
+gen_ST_Decls n st [] = st
+gen_ST_Decls n st decls = st''
      where 
         vs = filter isVar decls
         fs = filter isFun decls
         (d:rest) = vs++fs
-        (n', st', ir_v')    = gen_ST_Decl n st d ir_v
-        (n'', st'', ir_v'')   = gen_ST_Decls n st' rest ir_v'
+        st'    = gen_ST_Decl n st d
+        st''   = gen_ST_Decls n st' rest
 
-		
 --   M_fun (String,[(String,Int,M_type)],M_type,[M_decl],[M_stmt]) ->
 --   M_data (String,[(String,[M_type])]) ->
 --   ARGUMENT (name, ty, val) -> insert n? (gen_ST_Decl st d) : (gen_ST_Decls rest)
 
 
-gen_ST_Decl :: Int -> ST -> M_decl -> IR_Val -> (Int, ST, IR_Val)
-gen_ST_Decl n st d ir_v = proc_d n st d ir_v 
+gen_ST_Decl :: Int -> ST -> M_decl -> ST
+gen_ST_Decl n st d = proc_d n st d
    where
      add_args n st [] = st
      add_args n st ((name, dim, typ):ps) = add_args n' st' ps
        where (n', st') = insert n st (ARGUMENT (name, typ, dim)) 
 	 
-     proc_d n st d ir_v = case d of
-       M_var (name, arrSize, typ) ->  (n', st', c) 
-         where
-           (n',st') = insert n st (VARIABLE (name, typ, length arrSize))
-           c = (case ir_v of 
-             PROG_VAL (fs, nv, arrs, stmts) -> PROG_VAL (fs, (nv+1), arrs', stmts)
-               where
-                 I_VARIABLE (lvl, off, _, dim) = look_up name st'
-                 arrs' = if (dim > 0) then ((off,  transExprs arrSize st'):arrs) else (arrs)
-             FUN_VAL (label, fs, nv, na, arrs, stmts) -> FUN_VAL (label, fs, nv+1, na, arrs', stmts)
-               where
-                 I_VARIABLE (lvl, off, _, dim) = look_up name st'
-                 arrs' = if (dim > 0) then ((off,  transExprs arrSize st'):arrs) else (arrs)
-               )
-       M_fun (name,pL,rT,ds,_) -> (n'', st'''')
+     proc_d n st d = case d of
+       M_var (name, arrSize, typ) -> st'
+	     where (fn, st') = insert n st (VARIABLE (name, typ, length arrSize))     
+       M_fun (name,pL,rT,ds,_) -> st''''
          where 
            (n', st') = insert (n+1) st (FUNCTION (name, [], rT))
            st'' = new_scope (L_FUN rT) st'
            st''' = add_args n' st'' pL
-           (n'', st'''') = gen_ST_Decls n' st''' ds
+           st'''' = gen_ST_Decls n' st''' ds
 		   --I_FUN ("fn"++(show (n+1)), locfuns, nv, na, arrs, body)
 		   --locfuns = filter funs.
 		   
-gen_ST_Stmts :: Int -> ST -> [M_stmt] -> IR_Val -> (Int, ST, IR_Val)
-gen_ST_Stmts n st [] ir_v = st 
-gen_ST_Stmts n st (s:rest) ir_v = st''
+gen_ST_Stmts :: Int -> ST -> [M_stmt] -> ST
+gen_ST_Stmts n st [] = st 
+gen_ST_Stmts n st (s:rest) = st''
     where
        st'  = gen_ST_Stmt n st s
        st'' = gen_ST_Stmts n st' rest
 
-gen_ST_Stmt :: Int -> ST -> M_stmt -> (Int, ST, I_Stmt)
+gen_ST_Stmt :: Int -> ST -> M_stmt -> ST
 gen_ST_Stmt n st d = case d of
 --M_cond (M_expr, M_stmt,M_stmt) 
-	M_cond (e, s1, s2) -> (n'', st'', transStmt d)
+	M_cond (e, s1, s2) -> st''
            where 
-              (n',st') = gen_ST_Stmt n st s1
-              (n'',st'') = gen_ST_Stmt n' st' s2
-	M_block (decls, stmts) -> (n, st'', transStmt d)
+              st' = gen_ST_Stmt n st s1
+              st'' = gen_ST_Stmt n st' s2
+	M_block (decls, stmts) -> st''
            where 
               st' = new_scope L_BLK st
-			  iblock = I_BLOCK ([],0,[)],[])
-              (n', st'', iblock') = gen_ST_Decls n st' decls
-			  ir_v'' = aiblock ir_v)
-	x -> (n, st, ir_v)
-
-add_IR_stmt :: I_stmt -> IR_Val -> IR_Val
-add_IR_stmt stmt PROG_VAL (a,b,c,d) = PROG_VAL(a,b,c,stmt:d)
-add_IR_stmt stmt FUN_VAL (a,b,c,d,e) = FUN_VAL(a,b,c,d,stmt:e)
-
+              st''= gen_ST_Decls n st' decls
+	x -> st
 
 {-	data M_stmt = M_ass (String,[M_expr], M_expr)
             | M_while (M_expr, M_stmt)
@@ -180,7 +94,7 @@ add_IR_stmt stmt FUN_VAL (a,b,c,d,e) = FUN_VAL(a,b,c,d,stmt:e)
             | M_return (M_expr)
             | M_block ([M_decl],[M_stmt])
 -}
-			
+			 
 main = do
     args <- getArgs
     conts <- readFile (args !! 0)

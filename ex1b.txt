@@ -1,24 +1,8 @@
- fun w(x1:int,y1:int):int
-    {
-	var x2[2]:int;
-	
-      begin
-        return x1; 
-      end
-    };
-	
-	 fun dw(x1:int,y1:int):int
-    {
-	var x2[2]:int;
-	
-      begin
-        return x1; 
-      end
-    };
-	
-var z[3]:int;
+
+var z:int;
 var d[2]:int;
 begin
-  
+  if z=0 then z:=1 else d:=2;
 end
 
+ 
