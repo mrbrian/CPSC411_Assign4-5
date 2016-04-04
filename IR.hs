@@ -248,6 +248,25 @@ transOper op e st = case op of
 				 
 		 -}
 	
+
+transDecls :: Int -> [M_decl] -> ST -> (Int, ST)
+transDecls n [] st = (n, st)
+transDecls n (d:ds) st = (n'', st'')
+	where
+		(n', st')   = transDecl n d st
+		(n'', st'') = transDecls n' ds st'
+
+transDecl :: Int -> M_decl -> ST -> (Int, ST)
+transDecl n d st = (n', st')
+	where
+		(n', st') = case d of 
+			M_var (vn, vd, vt) -> insert n st (VARIABLE (vn, vt, vd'))
+				where 
+					vd' = length vd
+			M_fun (fn, fps, frt, fds, fstmts) -> insert (n+1) st (FUNCTION (fn, fps', frt))
+				where 
+					fps' = map (\(aN, aD, aT) -> (aT, aD)) fps
+
 transStmts :: [M_stmt] -> ST -> [I_stmt]
 transStmts [] st = []
 transStmts (stmt:stmts) st = v
@@ -257,38 +276,49 @@ transStmts (stmt:stmts) st = v
 		v = stmt':stmts'
 	 
 		 
-transStmt ::M_stmt -> ST -> I_stmt
+transStmt :: M_stmt -> ST -> I_stmt
 transStmt stmt st = case stmt of
-	{-M_ass (name, arrs, exp) -> (n, I_ASS (lvl, off, arrs', exp'), st)
+	M_ass (name, arrs, exp) -> I_ASS (lvl, off, arrs', exp')
 		where 
 			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
 			arrs' = transExprs arrs st
 			exp' = transExpr exp st	
-	M_while (exp, stmt) -> (n', I_WHILE (exp', stmt'), st')
+	M_while (exp, stmt) -> I_WHILE (exp', stmt')
 		where
 			exp' = transExpr exp st
-			(n', stmt', st') = transStmt n stmt st	
-	M_cond (e, s1, s2) -> (n'', I_COND (e', s1', s2'), st'')
+			stmt' = transStmt stmt st	
+	M_cond (e, s1, s2) -> I_COND (e', s1', s2')
 		where
 			e' = transExpr e st
-			(n', s1', st') = transStmt n s1 st
-			(n'', s2', st'') = transStmt n' s2 st'
-		-}
+			s1' = transStmt s1 st
+			s2' = transStmt s2 st		
 	M_read (name, arrs) -> (case typ of
-			M_int  -> (n, I_READ_I loc, st)
-			M_bool -> (n, I_READ_B loc, st)
-			M_real -> (n, I_READ_F loc, st))
+			M_int  -> I_READ_I loc
+			M_bool -> I_READ_B loc
+			M_real -> I_READ_F loc)
 		where
 			(I_VARIABLE (lvl, off, typ, _)) = look_up st name
 			arrs' = transExprs arrs st
 			loc = (lvl, off, arrs')
 	M_print (e) -> (case e of 
-		M_ival v -> (n, I_PRINT_I (I_IVAL (fromIntegral v)), st)
-		M_rval v -> (n, I_PRINT_F (I_RVAL v), st)
-		M_bval v -> (n, I_PRINT_B (I_BVAL v), st))	 -- ... expression????
+		M_ival v -> I_PRINT_I (I_IVAL (fromIntegral v))
+		M_rval v -> I_PRINT_F (I_RVAL v)
+		M_bval v -> I_PRINT_B (I_BVAL v))	 -- ... expression????
 	M_return (e) -> I_RETURN e'
 		where
-			e' = transExpr e st
+			e' = transExpr e st		
+	{-M_block (decls, stmts) -> I_BLOCK (fs', nv, vars', stmts')
+		where  
+			vs = filter isVar decls
+			--nv = length vs
+			st' = transDecls vs st
+			(st1':strest') = st'
+			Symbol_table (sc, nv, na, syms) = st1'
+			vars' = map (\(M_var (name, es, typ)) -> (transExprs es st')) vs
+			fs = filter isFun decls
+			fs' = transDecls fs st
+			stmts' = transStmts stmts st
+		-}	
 			
 transExprs :: [M_expr] -> ST -> [I_expr]
 transExprs [] st = []
@@ -309,7 +339,7 @@ transExpr e st = case e of
 			(I_VARIABLE (lvl, off, _, dim)) = look_up st str
 			es' = transExprs es st
 	--M_app (op, es)  -> I_REF (op', es')   what about this one
-	M_app (op, ess) -> I_APP (op', ess')
+	{-M_app (op, ess) -> I_APP (op', ess')
 		where
 			(e:es) = ess
 			op' = transOper op e st
@@ -356,4 +386,4 @@ transOper op e st = case op of
 	M_or     -> I_OR
 	M_float  -> I_FLOAT
 	M_floor  -> I_FLOOR
-	M_ceil   -> I_CEIL
+	M_ceil   -> I_CEIL-}

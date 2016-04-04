@@ -7,32 +7,18 @@
       end
     };
 	
+	 fun dw(x1:int,y1:int):int
+    {
+	var x2[2]:int;
+	
+      begin
+        return x1; 
+      end
+    };
+	
 var z[3]:int;
 var d[2]:int;
 begin
-  {
-    var z[1]:int;
-    fun f(x:int,y:int):int
-    {
-	
-	 fun u(x:int,y:int):int
-    {
-      begin
-        return y; 
-      end
-    };
-	
-      begin
-        return y; 
-      end
-    };
-    begin
-      read x;
-    end
-  };
-  read z;
-  z := x + z;
-  w := x - z;
-  print f(x,z);
+  
 end
 
