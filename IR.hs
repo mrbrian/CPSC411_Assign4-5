@@ -192,7 +192,9 @@ transOper op e st = case op of
 		M_rval v -> IADD_F)
 	M_mul    -> (case e of
 		M_ival v -> IMUL_I
-		M_rval v -> IMUL_F)
+		M_rval v -> IMUL_F
+		M_id v -> IMUL_F		
+		x -> error (show x))
 	M_sub    -> ISUB_F
 	M_div    -> IDIV_F
 	M_neg    -> INEG
@@ -207,4 +209,5 @@ transOper op e st = case op of
 	M_float  -> IFLOAT
 	M_floor  -> IFLOOR
 	M_ceil   -> ICEIL
+	x -> error (show x)
 	

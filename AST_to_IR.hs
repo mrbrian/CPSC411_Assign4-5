@@ -62,18 +62,46 @@ processFun (M_fun (name, args, ret_type, decls, stmts)) (n, st) = ([func], 0, []
 		(dec_funcs, dec_num_vars, dec_arrays, (n4, st5)) = processDecls decls (n3,st4)
 		stmts' = processStmts stmts (n4, st5)
 		
-		func = IFUN (st_label, dec_funcs, dec_num_vars, 0, dec_arrays, stmts')
+		func = IFUN (st_label, dec_funcs, dec_num_vars, length st_args, dec_arrays, stmts')
 
 processStmts :: [M_stmt] -> (Int,ST) -> [I_stmt]
 processStmts [] (n,st) = []
 processStmts (stmt:rest) (n,st) = st3
 	where
-		((n', st'), st1) = processStmt_Block stmt (n,st)
+		((n', st'), st1) = processStmt stmt (n,st)
 		st2 = processStmts rest (n',st')
 		st3 = st1:st2
 			
-processStmt_Block :: M_stmt -> (Int,ST) -> ((Int, ST), I_stmt)
-processStmt_Block stmt (n,st) = case stmt of
+processStmt :: M_stmt -> (Int,ST) -> ((Int, ST), I_stmt)
+processStmt stmt (n,st) = case stmt of
+	M_ass (name, arrs, exp) -> ((n,st), IASS (lvl, off, arrs', exp'))
+		where 
+			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
+			arrs' = transExprs arrs st
+			exp' = transExpr exp st	
+	{-M_while (exp, stmt) -> ((n,st) IWHILE (exp', stmt'))
+		where
+			exp' = transExpr exp st
+			(n',stmt') = transStmt stmt (n,st)
+	-}
+	M_cond (e, s1, s2) -> ((n'', st''), ICOND (e', s1', s2'))
+		where
+			e' = transExpr e st
+			((n',st'), s1')   = processStmt s1 (n,st)
+			((n'', st''), s2') = processStmt s2 (n',st')
+	M_read (name, arrs) -> (case typ of
+			M_int  -> ((n,st), IREAD_I loc)
+			M_bool -> ((n,st), IREAD_B loc)
+			M_real -> ((n,st), IREAD_F loc))
+		where
+			(I_VARIABLE (lvl, off, typ, _)) = look_up st name
+			arrs' = transExprs arrs st
+			loc = (lvl, off, arrs')
+	M_print (e) -> (case e of 
+		M_ival v -> ((n,st), IPRINT_I (IINT (fromIntegral v)))
+		M_rval v -> ((n,st), IPRINT_F (IREAL v))
+		M_bval v -> ((n,st), IPRINT_B (IBOOL v))	 -- ... expression????
+		M_app v  -> ((n,st), IPRINT_I (transExpr e st)))
 	M_block (decls, stmts) -> ((n', st'), IBLOCK (dec_funcs, dec_num_vars, dec_arrays, stmts'))
 		where  
 			(dec_funcs, dec_num_vars, dec_arrays, (n', st')) = processDecls decls (n,st)
@@ -81,7 +109,7 @@ processStmt_Block stmt (n,st) = case stmt of
 	M_return e -> ((n,st), IRETURN e')
 		where
 			e' = transExpr e st
-		
+	s -> error (show s)
 			
 		
 				
