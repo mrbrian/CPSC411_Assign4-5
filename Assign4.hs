@@ -11,26 +11,11 @@ import AbsMp
 import SkelMp
 import AST
 import SymbolTable
---import Semantic
 import IR
-
-gen_ST_Prog :: M_prog -> I_prog
-gen_ST_Prog (M_prog (ds, sts)) = IPROG (fs', nv, arrs', sts')
-   where
-     st  = new_scope L_PROG empty
-     (n, st')  = gen_ST_Decls 0 st ds
-	 
-     vs = filter isVar ds
-	 
-     nv = length vs
-     arrs = filter isArray vs  -- M_var (String,[M_expr],M_type)
-     arrs' = map (\a -> transArray a st') arrs    -- (Int,[I_expr])
-	 
-     fs = filter isFun ds
-     fs' = transFuns fs st'
-     st'' = gen_ST_Stmts n st' sts
-     sts' = transStmts sts st''
-
+import AST_to_IR
+{-	
+	
+	
 gen_ST_Decls :: Int -> ST -> [M_decl] -> (Int, ST)
 gen_ST_Decls n st [] = (n, st)
 gen_ST_Decls n st decls = (n'', st'')
@@ -76,7 +61,7 @@ gen_ST_Stmt n st d = case d of
               st' = new_scope L_BLK st
               (n', st'') = gen_ST_Decls n st' decls
 	x -> st
-
+-}
 			 
 main = do
     args <- getArgs
@@ -87,6 +72,6 @@ main = do
     case ptree of
         Ok  tree -> do
             let ast = transProg tree
-            let st = gen_ST_Prog ast 
+            let st = processProg ast 
             putStrLn $ ((ppShow ast) ++ "\n\n" ++ (ppShow st))
         Bad msg-> putStrLn msg

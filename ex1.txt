@@ -1,19 +1,20 @@
  fun w(x1:int,y1:int):int
     {
-	var x2[2]:int;
+		var x2[2]:int;
 	
-      begin
-        return y1; 
-      end
+		begin
+			return y1; 
+		end
     };
 	
 	 fun d(y2:int):int
     {
-      begin
-        return y2; 
-      end
+		begin
+			return y2; 
+		end
     };
 	
 var z:int;
+var z1[2]:int;
 begin
 end
