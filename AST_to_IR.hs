@@ -99,7 +99,7 @@ processStmt stmt (n,st) = case stmt of
 	M_print (e) -> (case e of 
 		M_ival v -> ((n,st), IPRINT_I (IINT (fromIntegral v)))
 		M_rval v -> ((n,st), IPRINT_F (IREAL v))
-		M_bval v -> ((n,st), IPRINT_B (IBOOL v))	 -- ... expression????
+		M_bval v -> ((n,st), IPRINT_B (IBOOL v))	 
 		M_size v -> ((n,st), IPRINT_I (transExpr e st))
 		M_app v  -> ((n,st), IPRINT_I (transExpr e st))
 		M_id v -> (case (transId e st) of
