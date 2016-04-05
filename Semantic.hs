@@ -2,97 +2,134 @@ module Semantic where
 
 import AST
 import SymbolTable
-	
-exist :: ST -> String -> Bool
-exist s x = find 0 s 
+import IR
+
+exist :: Int -> ST -> String -> Bool
+exist n st name = v
+	where
+		sym = look_up st name		
+		v = case sym of
+			I_VARIABLE (0,_,_,_) -> True
+			I_FUNCTION (0,_,_,_) -> True
+			_ -> False
+			
+checkProg :: M_prog -> Bool
+checkProg (M_prog (decls, stmts)) = v
    where
-      found level (Var_attr(offset,type_,dim)) 
-                    =  True
-      found level (Fun_attr(label,arg_Type,type_)) 
-                    = True
-      found level (Typ_attr cL) 
-                    = True
-					
-      find_level ((str,v):rest)|x== str = Just v
-                               |otherwise =  find_level rest
-      find_level [] = Nothing
+	 st = new_scope L_PROG []
+	 (n, st1, v1) = checkDecls decls (1, st)	
+	 v2 = checkStmts stmts st1
+	 v = v1 && v2
 
-      find n [] = False
-      find n (Symbol_table(_,_,_,vs):rest) =  -- what is vs... variables?  so get the vars of the first ST
-             (case find_level vs of         -- does this ST have the var in it?
-               Just v -> found n v         	-- return as an IVAR or IFUN.
-               Nothing -> find (n+1) rest) 		-- look at next ST.
-
-			 
-collect_decl :: M_decl -> ST -> ST
-collect_decl (M_var (name, es, typ)) st = st'
-  where 
-    (n, st') = insert 0 st (VARIABLE (name, typ, dim)) 
-    dim = length es
+checkDecls :: [M_decl] -> (Int, ST) -> (Int, ST, Bool)
+checkDecls [] (n,st) = (n, st, True)
+checkDecls (decl:decls) (n,st) = (n2,st2,v)
+     where 
+		(n1,st1,v1) = checkDecl decl (n,st)
+		(n2,st2,v2) = checkDecls decls (n1,st1)
+		v = v1 && v2
+		
+checkDecl :: M_decl -> (Int, ST) -> (Int, ST, Bool)
+checkDecl decl (n,st) = case decl of 
+	M_var _ -> checkVar decl (n,st)
+	M_fun _ -> checkFun decl (n,st)
 	
+checkVar :: M_decl -> (Int, ST) -> (Int, ST, Bool)
+checkVar (M_var (name, arr_exprs, typ)) (n, st) = v
+	where
+		dim = length arr_exprs
+		v = not (exist n st name)
+		(n', st') = insert n st (VARIABLE (name, typ, dim))		
+					 
+insert_args :: [(String, Int, M_type)] -> (Int, ST) -> (Int, ST)
+insert_args [] (n,st) = (n, st)
+insert_args (a:rest) (n,st) = (n'', st'')
+	where
+		(n', st') = insert_arg a (n,st)
+		(n'', st'') = insert_args rest (n',st')
+
+insert_arg :: (String, Int, M_type) -> (Int, ST) -> (Int, ST)
+insert_arg (name, dim, typ) (n,st) = (n', st')
+	where
+		(n', st') = insert n st (ARGUMENT (name, typ, dim))
+
+checkFun :: M_decl -> (Int, ST) -> (Int, ST, Bool)
+checkFun (M_fun (name, args, ret_type, decls, stmts)) (n, st) = v
+	where
+		v1 = not (exist n st name)
+		
+		sym_args = map (\(nam, dim, typ) -> (typ, dim)) args
+		(n1, st1) = insert n st (FUNCTION (name, sym_args, ret_type))
+		
+		st2 = new_scope (L_FUN ret_type) st1
+		
+		(st3,v2) = checkArgs n1 st2 args
+		(n2, st4, v3) = checkDecls n1 st3 decls
+		(n3, st5, v4) = checkStmts n2 st4 stmts
+		v = v1 && v2 && v3 && v4
+		
 	
-collect_decl (M_fun (name, args, rt, ds, sts)) st = st'
-  where 
-    (n, st') = insert 0 st (VARIABLE (name, typ, dim)) 
-    dim = length es
-	
-check_decl :: M_decl -> ST -> Bool
-check_decl (M_var (name, es, t)) st = v
-  where
-    v1 = exist st name
-    v2 = wf_exprs es st
-    v = v1 && v2
-	
-{-check_decl (M_fun ) st = v
-  where 
-    v1 = 
-    v2 = 
-    v = -}
-	
-wf_exprs :: [M_expr] -> ST -> Bool
-wf_exprs [] st = True
-wf_exprs (e:es) st = v
-  where
-    v1 = wf_expr e st
-    v2 = wf_exprs es st
-    v = v1 && v2
-
-get_dim :: String -> ST -> Int
-get_dim str st = dim
-  where 
-    (I_VARIABLE (lvl, off, typ, dim)) = look_up st str
-     
---  so.. i can check if msize is wellformed..  
--- but. should i be thinking about sending an error back someday?
--- that would seem more helpful?  and what about actually sending the value back?  
--- that must be from the stack machine code.
-
--- i will be able to check if something is well formed.. so.  how is that used in doing the IR?
--- prashant says it can be done separate.
-
-
-wf_expr :: M_expr -> ST -> Bool
-wf_expr (M_ival v) _ = True
-wf_expr (M_rval v) _ = True
-wf_expr (M_bval v) _ = True
-wf_expr (M_size (str, n)) st = v
-  where
-    v1 = exist st str
-    dim = get_dim str st
-    v  = v1 && (n < dim) && (dim >= 0)	
-wf_expr (M_id (str, es)) st = v
-  where 
-    v1 = exist st str
-    v2 = wf_exprs es st
-    v = v1 && v2
-wf_exp (M_app (_, e)) st = v
-  where
-	v = wf_exprs e st
-wf_exp _  _ = False
-
-{-
-            | M_rval Float
-            | M_bval Bool
-            | M_size (String,Int)
-            | M_id (String,[M_expr])
-            | M_app (M_operation,[M_expr])-}
+checkArgs :: Int -> ST -> [(String,Int,M_type)] -> (ST, Bool)
+checkArgs n st [] = (st, True)
+checkArgs n st (arg:rest) = (st'',v)
+	where
+		(st',v1) = checkArg n st arg
+		(st'',v2) = checkArgs n st' rest
+		v = v1 && v2
+		
+checkArg :: Int -> ST -> (String,Int,M_type) -> (ST, Bool)
+checkArg n st (name, dim, typ) = (st', v)
+	where
+		v = not (exist n st name)
+		(n, st') = insert n st ARGUMENT (name, typ, dim)
+		
+checkStmts :: [M_stmt] -> (Int,ST) -> Bool
+checkStmts [] (n,st) = []
+checkStmts (stmt:rest) (n,st) = v
+	where
+		(n1, st1, v1) = checkStmt stmt (n,st)
+		v2 = checkStmts rest (n1,st1)
+		v = v1 && v2
+			
+checkStmt :: M_stmt -> (Int,ST) -> (Int, ST, Bool)
+checkStmt stmt (n,st) = case stmt of
+	M_ass (name, arrs, exp) -> (n,st, IASS (lvl, off, arrs', exp'))
+		where 
+			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
+			arrs' = transExprs arrs st
+			exp' = transExpr exp st	
+	M_while (exp, stmt) -> (n',st', IWHILE (exp', stmt'))
+		where
+			exp' = transExpr exp st
+			((n',st'),stmt') = checkStmt stmt (n,st)	
+	M_cond (e, s1, s2) -> (n'', st'', ICOND (e', s1', s2'))
+		where
+			e' = transExpr e st
+			((n',st'), s1')   = checkStmt s1 (n,st)
+			((n'', st''), s2') = checkStmt s2 (n',st')
+	M_read (name, arrs) -> (case typ of
+			M_int  -> (n,st, True)
+			M_bool -> (n,st, True)
+			M_real -> (n,st, True))
+		where
+			(I_VARIABLE (lvl, off, typ, _)) = look_up st name
+			arrs' = transExprs arrs st
+			loc = (lvl, off, arrs')
+	M_print (e) -> (case e of 
+		M_ival v -> (n,st, IPRINT_I (IINT (fromIntegral v)))
+		M_rval v -> (n,st, IPRINT_F (IREAL v))
+		M_bval v -> (n,st, IPRINT_B (IBOOL v))	 -- ... expression????
+		M_app v  -> (n,st, IPRINT_I (transExpr e st)))
+	M_block (decls, stmts) -> (n', st', v)
+		where  
+			(n', st', v1) = checkDecls decls (n,st)
+			v2 = checkStmts stmts (n',st')
+			v = v1 && v2
+	M_return e -> (n,st, IRETURN e')
+		where
+			e' = transExpr e st
+	s -> error (show s)
+			
+		
+				
+				

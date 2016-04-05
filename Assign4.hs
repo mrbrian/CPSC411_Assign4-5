@@ -13,55 +13,6 @@ import AST
 import SymbolTable
 import IR
 import AST_to_IR
-{-	
-	
-	
-gen_ST_Decls :: Int -> ST -> [M_decl] -> (Int, ST)
-gen_ST_Decls n st [] = (n, st)
-gen_ST_Decls n st decls = (n'', st'')
-     where 
-        vs = filter isVar decls
-        fs = filter isFun decls
-        (d:rest) = vs++fs
-        (n', st')   = gen_ST_Decl n st d
-        (n'', st'') = gen_ST_Decls n' st' rest
-
-gen_ST_Decl :: Int -> ST -> M_decl -> (Int, ST)
-gen_ST_Decl n st d = proc_d n st d
-   where
-     add_args n st [] = st
-     add_args n st ((name, dim, typ):ps) = add_args n' st' ps
-       where (n', st') = insert n st (ARGUMENT (name, typ, dim)) 
-	 
-     proc_d n st d = case d of
-       M_var (name, arrSize, typ) -> (n, st')
-	     where (fn, st') = insert n st (VARIABLE (name, typ, length arrSize))     
-       M_fun (name,pL,rT,ds,_) -> (n'', st'''')
-         where 
-           (n', st') = insert (n+1) st (FUNCTION (name, [], rT))
-           st'' = new_scope (L_FUN rT) st'
-           st''' = add_args n' st'' pL
-           (n'', st'''') = gen_ST_Decls n' st''' ds
-		   
-gen_ST_Stmts :: Int -> ST -> [M_stmt] -> ST
-gen_ST_Stmts n st [] = st 
-gen_ST_Stmts n st (s:rest) = st''
-    where
-       st'  = gen_ST_Stmt n st s
-       st'' = gen_ST_Stmts n st' rest
-
-gen_ST_Stmt :: Int -> ST -> M_stmt -> ST
-gen_ST_Stmt n st d = case d of
-	M_cond (e, s1, s2) -> st''
-           where 
-              st' = gen_ST_Stmt n st s1
-              st'' = gen_ST_Stmt n st' s2
-	M_block (decls, stmts) -> st''
-           where 
-              st' = new_scope L_BLK st
-              (n', st'') = gen_ST_Decls n st' decls
-	x -> st
--}
 			 
 main = do
     args <- getArgs

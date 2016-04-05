@@ -8,8 +8,8 @@ processProg :: M_prog -> I_prog
 processProg (M_prog (decls, stmts)) = IPROG (funcs, num_vars, arrays, stmts')
    where
 	 st = new_scope L_PROG []
-	 (funcs, num_vars, arrays, st') = processDecls decls (0, st)	 
-	 stmts' = [] --processStmts stmts st' 
+	 (funcs, num_vars, arrays, st') = processDecls decls (1, st)	 
+	 stmts' = processStmts stmts st' 
 
 processDecls :: [M_decl] -> (Int, ST) -> ([I_fbody], Int, [(Int, [I_expr])], (Int, ST))
 processDecls [] (n,st) = ([], 0, [], (n, st))
@@ -79,11 +79,10 @@ processStmt stmt (n,st) = case stmt of
 			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
 			arrs' = transExprs arrs st
 			exp' = transExpr exp st	
-	{-M_while (exp, stmt) -> ((n,st) IWHILE (exp', stmt'))
+	M_while (exp, stmt) -> ((n',st'), IWHILE (exp', stmt'))
 		where
 			exp' = transExpr exp st
-			(n',stmt') = transStmt stmt (n,st)
-	-}
+			((n',st'),stmt') = processStmt stmt (n,st)	
 	M_cond (e, s1, s2) -> ((n'', st''), ICOND (e', s1', s2'))
 		where
 			e' = transExpr e st

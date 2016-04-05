@@ -3,12 +3,22 @@
 		var x2[2]:int;
 	
 		begin
-			return y1; 
+			return yz1; 
 		end
     };
 	
 	 fun d(y2:int):int
     {
+	
+		 fun d2(y2:int):int
+		{
+		var z33[4]:int;
+			begin
+				return z33[2]; 
+			end
+		};
+		
+	
 		begin
 			return y2; 
 		end
@@ -16,5 +26,6 @@
 	
 var z:int;
 var z1[2]:int;
+var z12[z1[2]]:int;
 begin
 end

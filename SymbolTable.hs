@@ -5,8 +5,8 @@ import AST
 data SYM_DESC = ARGUMENT (String, M_type, Int)
               | VARIABLE (String, M_type, Int)
               | FUNCTION (String, [(M_type,Int)], M_type)
-              | DATATYPE String 
-              | CONSTRUCTOR (String, [M_type], String)
+         --     | DATATYPE String 
+       --       | CONSTRUCTOR (String, [M_type], String)
               deriving (Eq, Show)
 -- I_VARIABLE (level, offset, type, dimension)
 -- I_FUNCTION (level, label, [arguments], return type)
@@ -15,8 +15,8 @@ data SYM_DESC = ARGUMENT (String, M_type, Int)
 
 data SYM_I_DESC = I_VARIABLE (Int,Int,M_type,Int)
                     | I_FUNCTION (Int,String,[(M_type,Int)],M_type)
-                    | I_CONSTRUCTOR (Int,[M_type],String)
-                    | I_TYPE [String]
+                   -- | I_CONSTRUCTOR (Int,[M_type],String)
+                  --  | I_TYPE [String]
                     deriving (Eq, Show)
 
 data ScopeType = L_PROG | L_FUN M_type | L_BLK | L_CASE 
@@ -25,8 +25,8 @@ data ScopeType = L_PROG | L_FUN M_type | L_BLK | L_CASE
 --Var_attr (offset, M_type, dim)               
 data SYM_VALUE = Var_attr (Int, M_type, Int)
                   | Fun_attr (String,[(M_type,Int)],M_type)
-                  | Con_attr (Int, [M_type], String)
-                  | Typ_attr [String]
+               --   | Con_attr (Int, [M_type], String)
+               --   | Typ_attr [String]
                   deriving (Eq, Show)
 
 -- Symbol_table (scopetype, #localvars, #args, [(String,SYM_VALUE)])
@@ -34,7 +34,7 @@ data SYM_TABLE = Symbol_table (ScopeType, Int, Int, [(String,SYM_VALUE)])
                  deriving (Eq, Show)
 
 type ST = [SYM_TABLE]
-
+{-
 test_st :: ST
 test_st = 
     [ Symbol_table(L_FUN M_int, 1,2,[ ("a",Var_attr(-5,M_int,0))
@@ -49,7 +49,7 @@ test_st =
                        , ("f",Fun_attr("code_label_f",[(M_int,0),(M_int,0)],M_int))
                        , ("v",Var_attr(2,M_int,0))])
     ]	
-
+-}
 empty:: ST
 empty = []
 
@@ -64,12 +64,6 @@ look_up s x = find 0 s
                     =  I_VARIABLE(level,offset,type_,dim)
       found level (Fun_attr(label,arg_Type,type_)) 
                     = I_FUNCTION(level,label,arg_Type,type_)
-      found level (Typ_attr cL) 
-                    = I_TYPE cL
-		{-
-                    | I_CONSTRUCTOR (Int,[M_type],String)
-                    | I_TYPE [String]
--}
       find_level ((str,v):rest)|x== str = Just v
                                |otherwise =  find_level rest
       find_level [] = Nothing
@@ -97,26 +91,6 @@ insert n ((Symbol_table(sT, nL,nA,sL)):rest) (VARIABLE (str,t,dim))
 insert n ((Symbol_table(sT, nL,nA,sL)):rest) (FUNCTION (str,ts,t))
 	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
 	   | otherwise = (n+1,(Symbol_table(sT, nL,nA,(str,Fun_attr(get_label n "fn",ts,t)):sL)):rest)
-	   
-insert n ((Symbol_table(sT, nL,nA,sL)):rest) (DATATYPE str)			
-	   | in_index_list str sL = error ("Symbol table error: "++str++"is already defined.")
-	   | otherwise = (n,(Symbol_table(sT, nL+1, nA,(str, Typ_attr []):sL)):rest)
-	   
-	   -- constructor#  const type   const Datatype
-insert n symTab (CONSTRUCTOR (cName,cInput,cType))
-	   | in_index_list cName sL = error ("Symbol table error: "++cName++"is already defined.")	   
-	   | otherwise = (n,(Symbol_table(sT, nL,nA,newHead:newSymList)):rest)
-	   where 
-	   ((Symbol_table(sT, nL,nA,sL)) : rest) = symTab  	-- deconstruct
-	   ((sN, sV) : sLrest) = sL				-- get symbol list
-	   I_TYPE (cL) = look_up symTab cType 			-- get contructor name list
-           newSymList = addCons cName [] sL			-- insert constructor name
-           cNum = (length cL) + 1				-- constructor num
-           newHead = (cName, Con_attr(cNum,cInput,cType))	-- make new symbol
-           -- insert constructor into Typ_attr's list
-	   addCons c preL [] = preL
-	   addCons c preL ((typName, Typ_attr cL):rest) = (preL++[(typName, Typ_attr (c:cL))]++rest)
-	   addCons c preL (a:rest) = addCons c (preL++[a]) rest
 
 -- checks if var is in a symbol table's list
 in_index_list :: String -> [(String, SYM_VALUE)] -> Bool

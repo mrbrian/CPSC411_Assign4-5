@@ -59,105 +59,6 @@ data I_opn = ICALL      (String,Int)
            | INOT | IAND | IOR | IFLOAT | ICEIL |IFLOOR
            deriving (Eq,Show)		
 	
-	{-
-transDecls :: Int -> [M_decl] -> ST -> (Int, ST)
-transDecls n [] st = (n, st)
-transDecls n (d:ds) st = (n'', st'')
-	where
-		(n', st')   = transDecl n d st
-		(n'', st'') = transDecls n' ds st'
-
-transDecl :: Int -> M_decl -> ST -> (Int, ST)
-transDecl n d st = (n', st')
-	where
-		(n', st') = case d of 
-			M_var (vn, vd, vt) -> insert n st (VARIABLE (vn, vt, vd'))
-				where 
-					vd' = length vd
-			M_fun (fn, fps, frt, fds, fstmts) -> insert (n+1) st (FUNCTION (fn, fps', frt))
-				where 
-					fps' = map (\(aN, aD, aT) -> (aT, aD)) fps
-
-					
-transStmts :: [M_stmt] -> (Int,ST) -> ((Int,ST),[I_stmt])
-transStmts [] st = []
-transStmts (stmt:stmts) (n,st) = v
-	where  
-		(n', stmt') = transStmt stmt (n,st)
-		(n'', stmts') = transStmts stmts (n',st)
-		v = (n'', stmt':stmts')
-	 
-		 
-transStmt :: M_stmt -> (Int,ST) -> ((Int,ST),I_stmt)
-transStmt stmt (n,st) = case stmt of
-	M_ass (name, arrs, exp) -> ((n,st) IASS (lvl, off, arrs', exp'))
-		where 
-			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
-			arrs' = transExprs arrs st
-			exp' = transExpr exp st	
-	M_while (exp, stmt) -> ((n,st) IWHILE (exp', stmt'))
-		where
-			exp' = transExpr exp st
-			(n',stmt') = transStmt stmt (n,st)
-	M_cond (e, s1, s2) -> ((n'', s2'), ICOND (e', s1', s2'))
-		where
-			e' = transExpr e st
-			(n',s1')   = transStmt s1 (n,st)
-			(n'', s2') = transStmt s2 (n',st)
-	M_read (name, arrs) -> (case typ of
-			M_int  -> (n, IREAD_I loc)
-			M_bool -> (n, IREAD_B loc)
-			M_real -> (n, IREAD_F loc))
-		where
-			(I_VARIABLE (lvl, off, typ, _)) = look_up st name
-			arrs' = transExprs arrs st
-			loc = (lvl, off, arrs')
-	M_print (e) -> (case e of 
-		M_ival v -> (n, IPRINT_I (IINT (fromIntegral v)))
-		M_rval v -> (n, IPRINT_F (IREAL v))
-		M_bval v -> (n, IPRINT_B (IBOOL v))	 -- ... expression????
-		M_app v -> (n, IPRINT_I (transExpr e st)))
-	M_return (e) -> (n, IRETURN e')
-		where
-			e' = transExpr e st
-	M_block (decls, stmts) -> (n, IBLOCK (fs', nv, arrs', stmts'))
-		where  
-			vs = filter isVar decls
-			--nv = length vs
-			(n', st') = transDecls n vs st
-			(st1':strest') = st'
-			Symbol_table (sc, nv, na, syms) = st1'
-			arrs' = [] --map (transArray ) (\(M_var (name, es, typ)) -> (transExprs es st')) vs
-			fs = filter isFun decls
-			fs' = []--transFuns fs st
-			stmts' = []--transStmts stmts st
-			
-		
-		
-transFuns :: [M_decl] -> ST -> [I_fbody]
-transFuns [] st = []
-transFuns (d:ds) st = (transFun d st):(transFuns ds st)
-
-transFun :: M_decl -> ST -> I_fbody
-transFun (M_fun (fn, fas, frt, fds, fsts)) st =  IFUN (fL, fbs', fnv, fna, farrs, fstmts)
-	where
-		I_FUNCTION (flvl, fL, fargs, frt) = look_up st fn
-		fbs = filter isFun fds   				-- look for funs inside..
-		fbs' = transFuns fbs st
-		fvs = filter isVar fds
-		fnv = length fvs
-		fna = length fas
-		fstmts = transStmts fsts st
-		farrs = []
-
-transArray :: M_decl -> ST -> (Int, [I_expr])
-transArray (M_var (name, es, typ)) st = v
-	where
-		I_VARIABLE (lvl,off,typ,dim) = look_up st name   --I_VARIABLE (Int,Int,M_type,Int)
-		es' = transExprs es st
-		v = (off, es')
--}
-
 transExprs :: [M_expr] -> ST -> [I_expr]
 transExprs [] st = []
 transExprs (e:es) st = ies
@@ -189,7 +90,8 @@ transOper op e st = case op of
 			(I_FUNCTION (lvl, label, _, _)) = look_up st str
 	M_add    -> (case e of
 		M_ival v -> IADD_I
-		M_rval v -> IADD_F)
+		M_rval v -> IADD_F
+		x -> error (show x))
 	M_mul    -> (case e of
 		M_ival v -> IMUL_I
 		M_rval v -> IMUL_F
