@@ -117,8 +117,7 @@ transOper op e st = case op of
 			M_real -> IADD_F)
 		M_app (op, e:exs) -> (case (get_type_expr st e) of
 			M_int -> IADD
-			M_real -> IADD_F)
-		_ -> error ((show op )++ (show e)++(show st)))
+			M_real -> IADD_F))
 	M_mul    -> (case e of
 		M_ival v -> IMUL
 		M_rval v -> IMUL_F
@@ -128,8 +127,7 @@ transOper op e st = case op of
 			M_real -> IMUL_F)
 		M_app (op, e:exs) -> (case (get_type_expr st e) of
 			M_int -> IMUL
-			M_real -> IMUL_F)	
-		_ -> error ((show op )++ (show e)++(show st)))
+			M_real -> IMUL_F))
 	M_sub    -> (case e of 
 		M_ival v -> ISUB
 		M_rval v -> ISUB_F

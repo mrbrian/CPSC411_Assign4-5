@@ -49,6 +49,7 @@ all_of_type t st (e:exs) = v
 		t2 = get
 		v1 = t1 == t2
 		v =
+		
 checkArrayExprs :: ST -> [M_expr] -> Bool
 checkArrayExprs st [] = True
 checkArrayExprs st exps = v

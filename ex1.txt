@@ -25,7 +25,8 @@
     };
 	
 var z:int;
-var z1[2]:int;
-var z12[z1[2]]:int;
+var z1[3]:int;
+var z12[3][2]:int;
 begin
+print size(z12[]);
 end
