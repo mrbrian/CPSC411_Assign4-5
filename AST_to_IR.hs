@@ -100,7 +100,12 @@ processStmt stmt (n,st) = case stmt of
 		M_ival v -> ((n,st), IPRINT_I (IINT (fromIntegral v)))
 		M_rval v -> ((n,st), IPRINT_F (IREAL v))
 		M_bval v -> ((n,st), IPRINT_B (IBOOL v))	 -- ... expression????
-		M_app v  -> ((n,st), IPRINT_I (transExpr e st)))
+		M_app v  -> ((n,st), IPRINT_I (transExpr e st))
+		M_id v -> (case (transId e st) of
+			M_int -> ((n,st),IPRINT_I (transExpr e st))
+			M_real -> ((n,st),IPRINT_F (transExpr e st)) 
+			M_bool -> ((n,st),IPRINT_B (transExpr e st)))
+		_ -> error ((show stmt)++(show st)))
 	M_block (decls, stmts) -> ((n', st'), IBLOCK (dec_funcs, dec_num_vars, dec_arrays, stmts'))
 		where  
 			(dec_funcs, dec_num_vars, dec_arrays, (n', st')) = processDecls decls (n,st)

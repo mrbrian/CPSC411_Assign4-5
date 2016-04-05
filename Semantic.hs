@@ -4,15 +4,73 @@ import AST
 import SymbolTable
 import IR
 
-exist :: Int -> ST -> String -> Bool
-exist n st name = v
+exists :: ST -> String -> Bool
+exists st name = v
 	where
 		sym = look_up st name		
 		v = case sym of
 			I_VARIABLE (0,_,_,_) -> True
 			I_FUNCTION (0,_,_,_) -> True
 			_ -> False
-			
+
+get_type_sid :: SYM_I_DESC -> M_type
+get_type_sid sym = case sym of
+	I_VARIABLE (_,_,t,_) -> t
+	I_FUNCTION (_,_,_,t) -> t
+
+get_type_expr :: ST -> M_expr -> M_types
+get_type_expr st exp = case exp of
+			M_ival _ -> M_int
+			M_rval _ -> M_real
+			M_bval _ -> M_bool
+			M_size _ -> M_int
+			M_id (str,exs) -> type'
+				where 
+					desc = look_up st str
+					type' = get_type_sid desc
+			M_app (_, e:exs) -> get_type_expr st e
+	
+same_type :: ST -> String -> M_expr -> Bool
+same_type st name expr = v
+	where
+		sym_i_desc1 = look_up st name
+		type1 = get_type_sid sym_i_desc1		
+		type2 = get_type_expr st expr
+		
+		v1 = checkExpr st expr
+		v2 = type1 == type2
+		v = v1 && v2
+
+all_of_type :: M_type -> ST -> [M_expr] -> Bool
+all_of_type t st [] = True
+all_of_type t st (e:exs) = v
+	where
+		t1 = get_type_expr st e  
+		t2 = get
+		v1 = t1 == t2
+		v =
+checkArrayExprs :: ST -> [M_expr] -> Bool
+checkArrayExprs st [] = True
+checkArrayExprs st exps = v
+	wheren
+		v1 = all_int_type st exps
+		v =
+
+checkExpr :: ST -> M_expr -> Bool
+checkExpr st exp = case exp of 
+			M_ival _ -> True
+			M_rval _ -> True
+			M_bval _ -> True
+			M_size exs -> checkExprs 
+			M_id (str,exs) -> v
+				where 
+					v1 = exists st str
+					v2 = checkExprs st exs
+					desc = look_up st str
+					type' = get_type_sid desc
+			M_app (_, e:exs) -> get_type_expr st e
+	
+		
 checkProg :: M_prog -> Bool
 checkProg (M_prog (decls, stmts)) = v
    where
@@ -38,7 +96,7 @@ checkVar :: M_decl -> (Int, ST) -> (Int, ST, Bool)
 checkVar (M_var (name, arr_exprs, typ)) (n, st) = v
 	where
 		dim = length arr_exprs
-		v = not (exist n st name)
+		v = not (exists n st name)
 		(n', st') = insert n st (VARIABLE (name, typ, dim))		
 					 
 insert_args :: [(String, Int, M_type)] -> (Int, ST) -> (Int, ST)
@@ -56,7 +114,7 @@ insert_arg (name, dim, typ) (n,st) = (n', st')
 checkFun :: M_decl -> (Int, ST) -> (Int, ST, Bool)
 checkFun (M_fun (name, args, ret_type, decls, stmts)) (n, st) = v
 	where
-		v1 = not (exist n st name)
+		v1 = not (exists n st name)
 		
 		sym_args = map (\(nam, dim, typ) -> (typ, dim)) args
 		(n1, st1) = insert n st (FUNCTION (name, sym_args, ret_type))
@@ -80,7 +138,7 @@ checkArgs n st (arg:rest) = (st'',v)
 checkArg :: Int -> ST -> (String,Int,M_type) -> (ST, Bool)
 checkArg n st (name, dim, typ) = (st', v)
 	where
-		v = not (exist n st name)
+		v = not (exists n st name)
 		(n, st') = insert n st ARGUMENT (name, typ, dim)
 		
 checkStmts :: [M_stmt] -> (Int,ST) -> Bool
@@ -93,11 +151,15 @@ checkStmts (stmt:rest) (n,st) = v
 			
 checkStmt :: M_stmt -> (Int,ST) -> (Int, ST, Bool)
 checkStmt stmt (n,st) = case stmt of
-	M_ass (name, arrs, exp) -> (n,st, IASS (lvl, off, arrs', exp'))
+	M_ass (name, arrs, exp) -> (n,st, v)
 		where 
+			v1 = exists st name			
 			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
 			arrs' = transExprs arrs st
 			exp' = transExpr exp st	
+			v2 = in_range st name
+			v3 = same_type st name exp
+			v = v1 && v2 && v3
 	M_while (exp, stmt) -> (n',st', IWHILE (exp', stmt'))
 		where
 			exp' = transExpr exp st

@@ -83,6 +83,12 @@ transExpr e st = case e of
 			op' = transOper op e st
 			ess' = transExprs (ess) st
 
+transId :: M_expr -> ST -> M_type
+transId (M_id (name, arr_exps)) st = typ
+	where
+		I_VARIABLE (lvl, off, typ, dim) = look_up st name
+
+		
 transOper :: M_operation -> M_expr -> ST -> I_opn
 transOper op e st = case op of
 	M_fn str ->  ICALL	(label, lvl)
@@ -91,12 +97,15 @@ transOper op e st = case op of
 	M_add    -> (case e of
 		M_ival v -> IADD_I
 		M_rval v -> IADD_F
-		x -> error (show x))
+		M_id v -> (case (transId e st) of
+			M_int -> IMUL_I
+			M_real -> IMUL_F)
+		x -> error ((show op )++ (show e)++(show st)))
 	M_mul    -> (case e of
 		M_ival v -> IMUL_I
 		M_rval v -> IMUL_F
 		M_id v -> IMUL_F		
-		x -> error (show x))
+		x -> error ((show op )++ (show e)++(show st)))
 	M_sub    -> ISUB_F
 	M_div    -> IDIV_F
 	M_neg    -> INEG
