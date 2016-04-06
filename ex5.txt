@@ -1,7 +1,28 @@
+% funcs in blocks, funcs/vars with same name
+% should fail: condition expression not a boolean
+% should fail: array expressions are not integers
 
-begin 
-  y := 23;
-  x := 13 + y;
-  write x;
-  
+var a:bool;
+var temp:int;
+
+begin
+	read temp;
+	if (temp) then
+	{ 
+		fun test(a:int,c:bool):int
+		{
+			var b:int;
+			begin
+				read b;
+				return a+b;
+			end
+		};
+		
+		begin 
+			print a;
+			a = test(1, true);
+		end 
+	}
+	else
+		a := true;
 end

@@ -43,8 +43,8 @@ transVar_declaration x = case x of
 transType :: Type -> M_type
 transType x = case x of
   Type_int -> M_int
-  Type_real -> M_bool
-  Type_bool -> M_real
+  Type_real -> M_real
+  Type_bool -> M_bool
   
 transArray_dimensions :: Array_dimensions -> [M_expr]
 transArray_dimensions x = case x of

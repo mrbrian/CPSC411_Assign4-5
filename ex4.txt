@@ -1,22 +1,28 @@
-var x:int;
-var y:int;
+% funcs in blocks, funcs/vars with same name
+% should fail: assigning a non-matching return type
+% should fail: condition expression not a boolean
+% should fail: array expressions are not integers
 
-fun exp(b:int):int
-{
-	var z:int;
-	begin
-	if not b>=0 then z:= 1
-		else z:= x * exp(b-1);
-	if b=0 then z:= 1
-		else z:= x * exp(b-1);
-	return z;
-	end
-};
+var a:bool;
 
 begin
-	read x;
-	read y;
-	print exp(y);
-	print float (y);
-	print ceil(y);
+	read a;
+	if (a) then
+	{ 
+		fun test(a:int,c:bool):int
+		{
+			var b:int;
+			begin
+				read b;
+				return a+b;
+			end
+		};
+		
+		begin 
+			print a;
+			a := test(1, true);
+		end 
+	}
+	else
+		read a;
 end

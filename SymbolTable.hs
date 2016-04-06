@@ -29,7 +29,6 @@ empty = []
 new_scope :: ScopeType -> ST -> ST
 new_scope t s = (Symbol_table(t,0,0,[])) : s
 
-
 look_up :: ST -> String -> SYM_I_DESC 
 look_up s x = find 0 s 
    where
@@ -77,9 +76,9 @@ remove_scope (s:rest) = (nL, rest)
 	where
 		Symbol_table (_, nL, _, _) = s
 
-return :: ST -> M_type
-return [] = error "no return type"
-return (s:rest) = case sT of
+return_type :: ST -> M_type
+return_type [] = error "no return type"
+return_type (s:rest) = case sT of
 	L_FUN t -> t
 	x -> error "no return type"
 	where 

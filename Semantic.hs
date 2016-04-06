@@ -24,7 +24,26 @@ get_type e st = case e of
 	M_id (str,exs) -> t
 		where
 			I_VARIABLE (_,_,t,_) = look_up st str
-	M_app (op, e:exs) -> get_type e st
+	M_app (op, e:exs) -> case op of 
+		M_fn str -> t
+			where 
+			I_FUNCTION (_,_,_,t) = look_up st str
+		M_add -> get_type e st
+		M_mul -> get_type e st
+		M_sub -> get_type e st
+		M_div -> get_type e st
+		M_neg -> get_type e st
+		M_lt -> M_bool
+		M_le -> M_bool
+		M_gt -> M_bool
+		M_ge -> M_bool
+		M_eq -> M_bool
+		M_not -> M_bool
+		M_and -> M_bool
+		M_or -> M_bool
+		M_float -> M_real
+		M_floor -> M_int 
+		M_ceil -> M_int
 
 all_same_type :: ST -> [M_expr] -> Bool
 all_same_type st [] = True
@@ -58,8 +77,17 @@ checkExpr exp st = case exp of
 			M_bval _ -> True
 			M_size (str, x) -> True
 			M_id (str,exs) -> are_ints st exs					
-			M_app (_, exs) -> all_same_type st exs
-		
+			M_app (op, exs) -> (case op of
+				M_fn str -> v
+					where
+					  --  I_FUNCTION (Int,String,[(M_type,Int)],M_type)
+						I_FUNCTION (_,_,f_args,_) = look_up st str
+						f_types = map (\(a_type, _) -> a_type) f_args
+						in_args = exs
+						in_types = map (\a -> get_type a st) in_args 
+						v = in_types == f_types
+				_ -> all_same_type st exs)
+					
 checkProg :: M_prog -> Bool
 checkProg (M_prog (decls, stmts)) = v
    where
@@ -137,18 +165,19 @@ checkStmts (stmt:rest) (n,st) = v
 			
 checkStmt :: M_stmt -> (Int,ST) -> (Int, ST, Bool)
 checkStmt stmt (n,st) = case stmt of
-	M_ass (name, arrs, exp) -> (n,st, v)
+	M_ass (name, arrs, exp) -> error (show (st))--x,stmt, v_type,e_type,v))--(n,st,v)
 		where 	
-			(I_VARIABLE (lvl, off, _, _)) = look_up st name 
-			arrs' = transExprs arrs st
-			exp' = transExpr exp st	
-			v = same_type st name exp
+			x = look_up st name 
+			I_VARIABLE (_,_,v_type,_) = look_up st name 
+			e_type = get_type exp st
+			v = v_type == e_type 
 	M_while (exp, stmt) -> (n',st', exp' && stmt')
 		where
 			exp' = checkExpr exp st
 			(n',st',stmt') = checkStmt stmt (n,st)	
-	M_cond (e, s1, s2) -> (n'', st'', e' && s1' && s2')
+	M_cond (e, s1, s2) -> (n'', st'', (e_type == M_bool) && e' && s1' && s2')
 		where
+			e_type = get_type e st
 			e' = checkExpr e st
 			(n',st', s1')   = checkStmt s1 (n,st)
 			(n'', st'', s2') = checkStmt s2 (n',st')
@@ -169,12 +198,16 @@ checkStmt stmt (n,st) = case stmt of
 		M_id (v, exs)  -> (n,st, (are_ints st exs)))
 	M_block (decls, stmts) -> (n', st', v)
 		where  
-			(n', st', v1) = checkDecls decls (n,st)
-			v2 = checkStmts stmts (n',st')
+			st' = new_scope L_BLK st
+			(n', st'', v1) = checkDecls decls (n,st')
+			v2 = checkStmts stmts (n',st'')
 			v = v1 && v2
-	M_return e -> (n,st, e')
+	M_return e -> (n,st,v)
 		where
+			r_type = return_type st --get of return type the symbol table on stack
+			e_type = get_type e st
 			e' = checkExpr e st
-		
+			v = e' && (e_type == r_type)
+			
 				
 				

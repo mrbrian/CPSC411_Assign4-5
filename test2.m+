@@ -1,9 +1,8 @@
-var x:int;
-var y:int;
+% semantic check should fail, int as if expression
+
 var a: bool;
-fun f(a:int,b:int):bool
-   {begin return a > b; end};
+
 begin
-   read x;read y;
-   a := f(y,x); print a;
+   if (1-2) then a := True else a := False;
+   while (1+2) do { begin end };
 end
