@@ -1,32 +1,30 @@
- fun w(x1:int,y1:int):int
-    {
-		var x2[2]:int;
+fun w(x1:int,y1:int):int
+{
+	var x2[2]:int;
+
+	begin
+		return y1; 
+	end
+};
 	
-		begin
-			return y1; 
-		end
-    };
-	
-	 fun d(y2:int):int
-    {
-	
-		 fun d2(y2:int):int
-		{
+fun d(y2:int):int
+{
+	fun d2(y2:int):int
+	{
 		var z33[4]:int;
-			begin
-				return z33[2]; 
-			end
-		};
-		
-	
 		begin
-			return y2; 
+			return z33[2]; 
 		end
-    };
+	};
+	
+	begin
+		return y2; 
+	end
+};
 	
 var z:int;
 var z1[3]:int;
 var z12[3][2]:int;
 begin
-print size(z12[]);
+	print size(z12[]);
 end

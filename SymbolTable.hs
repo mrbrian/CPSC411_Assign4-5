@@ -13,13 +13,11 @@ data SYM_I_DESC = I_VARIABLE (Int,Int,M_type,Int)
 
 data ScopeType = L_PROG | L_FUN M_type | L_BLK | L_CASE 
               deriving (Eq, Show)
-
---Var_attr (offset, M_type, dim)               
+            
 data SYM_VALUE = Var_attr (Int, M_type, Int)
               | Fun_attr (String,[(M_type,Int)],M_type)
               deriving (Eq, Show)
 
--- Symbol_table (scopetype, #localvars, #args, [(String,SYM_VALUE)])
 data SYM_TABLE = Symbol_table (ScopeType, Int, Int, [(String,SYM_VALUE)])
               deriving (Eq, Show)
 
