@@ -54,10 +54,12 @@ checkExpr exp st = case exp of
 			M_id (str,exs) -> v1 && v2
 				where 
 					v1 = exists st str
-					v2 = checkExprs st exs
+					v2 = checkExprs exs st
 					desc = look_up st str
 					type' = get_type_sid desc
-			M_app (_, e:exs) -> get_type_expr st e
+			M_app (_, e:exs) -> error "not done" {-v
+				where
+					get_type_expr st e-}
 	
 		
 checkProg :: M_prog -> Bool
@@ -65,7 +67,7 @@ checkProg (M_prog (decls, stmts)) = v
    where
 	 st = new_scope L_PROG []
 	 (n, st1, v1) = checkDecls decls (1, st)	
-	 v2 = checkStmts stmts st1
+	 v2 = checkStmts stmts (n,st1)
 	 v = v1 && v2
 
 checkDecls :: [M_decl] -> (Int, ST) -> (Int, ST, Bool)
@@ -82,10 +84,10 @@ checkDecl decl (n,st) = case decl of
 	M_fun _ -> checkFun decl (n,st)
 	
 checkVar :: M_decl -> (Int, ST) -> (Int, ST, Bool)
-checkVar (M_var (name, arr_exprs, typ)) (n, st) = v
+checkVar (M_var (name, arr_exprs, typ)) (n, st) = (n', st', v)
 	where
 		dim = length arr_exprs
-		v = not (exists n st name)
+		v = not (exists st name)
 		(n', st') = insert n st (VARIABLE (name, typ, dim))		
 					 
 insert_args :: [(String, Int, M_type)] -> (Int, ST) -> (Int, ST)
