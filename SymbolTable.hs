@@ -34,29 +34,34 @@ data SYM_TABLE = Symbol_table (ScopeType, Int, Int, [(String,SYM_VALUE)])
                  deriving (Eq, Show)
 
 type ST = [SYM_TABLE]
-{-
-test_st :: ST
-test_st = 
-    [ Symbol_table(L_FUN M_int, 1,2,[ ("a",Var_attr(-5,M_int,0))
-                       , ("b",Var_attr(-4,M_int,0))
-                       , ("y",Var_attr(1,M_int,0))])
-    , Symbol_table(L_FUN M_int, 1,2,[ ("y",Var_attr(-5,M_int,0))
-                       , ("z",Var_attr(-4,M_int,0))
-                       , ("x",Var_attr(1,M_int,0))
-                       , ("a",Var_attr(2,M_int,2))
-                       , ("g",Fun_attr("code_label_g",[(M_int,0),(M_int,2)],M_int))])
-    , Symbol_table(L_PROG, 2,0,[ ("x",Var_attr(1,M_int,0))
-                       , ("f",Fun_attr("code_label_f",[(M_int,0),(M_int,0)],M_int))
-                       , ("v",Var_attr(2,M_int,0))])
-    ]	
--}
+
 empty:: ST
 empty = []
 
--- what does this do    add a symbol table to the stack?  yes   why diff types?  
 new_scope :: ScopeType -> ST -> ST
 new_scope t s = (Symbol_table(t,0,0,[])) : s
-  
+
+{-
+exists :: ST -> String -> Bool 
+exists s x = find 0 s 
+   where
+      found level (Var_attr(offset,type_,dim)) 
+                    =  I_VARIABLE(level,offset,type_,dim)
+      found level (Fun_attr(label,arg_Type,type_)) 
+                    = I_FUNCTION(level,label,arg_Type,type_)
+      find_level ((str,v):rest)|x== str = Just v
+                               |otherwise =  find_level rest
+      find_level [] = Nothing
+
+      find n [] = False
+      find n (Symbol_table(_,_,_,vs):rest) =  -- what is vs... variables?  so get the vars of the first ST
+             (case find_level vs of         -- does this ST have the var in it?
+               Just v -> case (found n v) of         	-- return as an IVAR or IFUN.
+                   I_VARIABLE (0,_,_,_) -> True
+                   I_FUNCTION (0,_,_,_) -> True
+               Nothing -> find (n+1) rest) 		-- look at next ST.
+-}
+
 look_up :: ST -> String -> SYM_I_DESC 
 look_up s x = find 0 s 
    where

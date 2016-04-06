@@ -13,16 +13,20 @@ import AST
 import SymbolTable
 import IR
 import AST_to_IR
+import Semantic			 
 			 
 main = do
-    args <- getArgs
-    conts <- readFile (args !! 0)
-    let tok = tokens conts
-    let ptree = pProg tok       
-    putStrLn "The AST Tree:\n"
-    case ptree of
-        Ok  tree -> do
-            let ast = transProg tree
-            let st = processProg ast 
-            putStrLn $ ((ppShow ast) ++ "\n\n" ++ (ppShow st))
-        Bad msg-> putStrLn msg
+	args <- getArgs
+	conts <- readFile (args !! 0)
+	let tok = tokens conts
+	let ptree = pProg tok       
+	putStrLn "The AST Tree:\n"
+	case ptree of
+		Ok  tree -> do
+			let ast = transProg tree			
+			let type_check = checkProg ast 
+			let ir = processProg ast
+			(case type_check of
+				True -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check passed!\n\n" ++ (ppShow ir))
+				False -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check failed.\n\n"))
+		Bad msg-> putStrLn msg
