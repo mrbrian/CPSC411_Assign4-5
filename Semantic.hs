@@ -35,13 +35,6 @@ all_same_type st (e:exs) = (case not_same of
 		t1 = get_type e st
 		not_same = [x | x <- exs, not ((get_type x st) == t1)]		
 		
-checkArrayExprs :: [M_expr] -> ST -> Bool
-checkArrayExprs [] st = True
-checkArrayExprs exps st = error " checkArrayExprs not done" {-v
-	wheren
-		v1 = all_int_type st exps
-		v =-}
-
 are_ints :: ST -> [M_expr] -> Bool
 are_ints st exs = (case not_ints of
 	[] -> True
@@ -63,7 +56,7 @@ checkExpr exp st = case exp of
 			M_ival _ -> True
 			M_rval _ -> True
 			M_bval _ -> True
-			M_size (str, x) -> error "checkExpr not done" --checkExprs x st
+			M_size (str, x) -> True
 			M_id (str,exs) -> are_ints st exs					
 			M_app (_, exs) -> all_same_type st exs
 		
@@ -170,7 +163,7 @@ checkStmt stmt (n,st) = case stmt of
 	M_print (e) -> (case e of 
 		M_ival v -> (n,st, True)
 		M_rval v -> (n,st, True)
-		M_bval v -> (n,st, True)	 -- ... expression????
+		M_bval v -> (n,st, True)	 
 		M_app v  -> (n,st, (checkExpr e st))
 		M_id (v, exs)  -> (n,st, (are_ints st exs))
 		_ -> error (show (e,stmt,n,st)))
