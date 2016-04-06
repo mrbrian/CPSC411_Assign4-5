@@ -164,9 +164,9 @@ checkStmt stmt (n,st) = case stmt of
 		M_ival v -> (n,st, True)
 		M_rval v -> (n,st, True)
 		M_bval v -> (n,st, True)	 
+		M_size v -> (n,st, True)	 
 		M_app v  -> (n,st, (checkExpr e st))
-		M_id (v, exs)  -> (n,st, (are_ints st exs))
-		_ -> error (show (e,stmt,n,st)))
+		M_id (v, exs)  -> (n,st, (are_ints st exs)))
 	M_block (decls, stmts) -> (n', st', v)
 		where  
 			(n', st', v1) = checkDecls decls (n,st)

@@ -214,5 +214,5 @@ transOper op e st = case op of
 	M_float  -> IFLOAT
 	M_floor  -> IFLOOR
 	M_ceil   -> ICEIL
-	x -> error (show x)
+	x -> error ("transOper "++(show x))
 	

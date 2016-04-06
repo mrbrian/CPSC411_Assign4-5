@@ -105,8 +105,7 @@ processStmt stmt (n,st) = case stmt of
 		M_id v -> (case (transId e st) of
 			M_int -> ((n,st),IPRINT_I (transExpr e st))
 			M_real -> ((n,st),IPRINT_F (transExpr e st)) 
-			M_bool -> ((n,st),IPRINT_B (transExpr e st)))
-		_ -> error ((show stmt)++(show st)))
+			M_bool -> ((n,st),IPRINT_B (transExpr e st))))
 	M_block (decls, stmts) -> ((n', st'), IBLOCK (dec_funcs, dec_num_vars, dec_arrays, stmts'))
 		where  
 			(dec_funcs, dec_num_vars, dec_arrays, (n', st')) = processDecls decls (n,st)
@@ -114,7 +113,6 @@ processStmt stmt (n,st) = case stmt of
 	M_return e -> ((n,st), IRETURN e')
 		where
 			e' = transExpr e st
-	s -> error (show s)
 			
 		
 				
