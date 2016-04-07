@@ -1,5 +1,27 @@
-begin 
-if y then x:= 10 
-       else x:= 1;
-z:= z * x;
+% funcs in blocks, funcs/vars with same name
+% should fail: array expressions are not integers
+
+var a:bool;
+var temp[5][5.0]:int;
+
+begin
+	read temp;
+	if (temp) then
+	{ 
+		fun test(a:int,c:bool):int
+		{
+			var b:int;
+			begin
+				read b;
+				return a+b;
+			end
+		};
+		
+		begin 
+			print a;
+			a := test(1, true);
+		end 	
+	}
+	else
+		a := true;
 end

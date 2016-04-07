@@ -1,6 +1,5 @@
 % funcs in blocks, funcs/vars with same name
 % should fail: condition expression not a boolean
-% should fail: array expressions are not integers
 
 var a:bool;
 var temp:int;
@@ -20,8 +19,8 @@ begin
 		
 		begin 
 			print a;
-			a = test(1, true);
-		end 
+			a := test(1, true);
+		end 	
 	}
 	else
 		a := true;

@@ -1,7 +1,5 @@
 % funcs in blocks, funcs/vars with same name
 % should fail: assigning a non-matching return type
-% should fail: condition expression not a boolean
-% should fail: array expressions are not integers
 
 var a:bool;
 

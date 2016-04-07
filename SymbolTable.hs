@@ -11,7 +11,7 @@ data SYM_I_DESC = I_VARIABLE (Int,Int,M_type,Int)
               | I_FUNCTION (Int,String,[(M_type,Int)],M_type)
               deriving (Eq, Show)
 
-data ScopeType = L_PROG | L_FUN M_type | L_BLK | L_CASE 
+data ScopeType = L_PROG | L_FUN M_type | L_BLK 
               deriving (Eq, Show)
             
 data SYM_VALUE = Var_attr (Int, M_type, Int)

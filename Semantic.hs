@@ -129,7 +129,7 @@ insert_arg (name, dim, typ) (n,st) = (n', st')
 		(n', st') = insert n st (ARGUMENT (name, typ, dim))
 
 checkFun :: M_decl -> (Int, ST) -> (Int, ST, Bool)
-checkFun (M_fun (name, args, ret_type, decls, stmts)) (n, st) = (n2, st4, v)
+checkFun (M_fun (name, args, ret_type, decls, stmts)) (n, st) = (n2, st1, v)
 	where		
 		sym_args = map (\(nam, dim, typ) -> (typ, dim)) args
 		(n1, st1) = insert n st (FUNCTION (name, sym_args, ret_type))
@@ -165,7 +165,7 @@ checkStmts (stmt:rest) (n,st) = v
 			
 checkStmt :: M_stmt -> (Int,ST) -> (Int, ST, Bool)
 checkStmt stmt (n,st) = case stmt of
-	M_ass (name, arrs, exp) -> error (show (st))--x,stmt, v_type,e_type,v))--(n,st,v)
+	M_ass (name, arrs, exp) -> (n,st,v)
 		where 	
 			x = look_up st name 
 			I_VARIABLE (_,_,v_type,_) = look_up st name 
@@ -196,7 +196,7 @@ checkStmt stmt (n,st) = case stmt of
 		M_size v -> (n,st, True)	 
 		M_app v  -> (n,st, (checkExpr e st))
 		M_id (v, exs)  -> (n,st, (are_ints st exs)))
-	M_block (decls, stmts) -> (n', st', v)
+	M_block (decls, stmts) -> (n', st, v)
 		where  
 			st' = new_scope L_BLK st
 			(n', st'', v1) = checkDecls decls (n,st')

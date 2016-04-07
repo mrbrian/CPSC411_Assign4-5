@@ -1,8 +1,0 @@
-
-var z:int;
-var d[2]:int;
-begin
-  if z=0 then z:=1 else d:=2;
-end
-
- 
