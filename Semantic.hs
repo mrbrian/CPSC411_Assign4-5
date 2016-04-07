@@ -4,6 +4,27 @@ import AST
 import SymbolTable
 import IR
 
+valid_input_type :: M_operation -> M_expr -> ST -> Bool
+valid_input_type op e st = (case op of
+	M_add -> elem e_type [M_int, M_real]
+	M_mul -> elem e_type [M_int, M_real]
+	M_sub -> elem e_type [M_int, M_real]
+	M_div -> elem e_type [M_int, M_real]
+	M_neg -> elem e_type [M_int, M_real]
+	M_lt -> elem e_type [M_int, M_real]
+	M_le -> elem e_type [M_int, M_real]
+	M_gt -> elem e_type [M_int, M_real]
+	M_ge -> elem e_type [M_int, M_real]
+	M_eq -> elem e_type [M_int, M_real]
+	M_not -> e_type == M_bool
+	M_and -> e_type == M_bool
+	M_or -> e_type == M_bool
+	M_float -> e_type == M_int
+	M_floor -> e_type == M_real 
+	M_ceil -> e_type == M_real)
+		where
+			e_type = get_type e st
+
 same_type :: ST -> String -> M_expr -> Bool
 same_type st name expr = v
 	where
@@ -86,7 +107,13 @@ checkExpr exp st = case exp of
 						in_args = exs
 						in_types = map (\a -> get_type a st) in_args 
 						v = in_types == f_types
-				_ -> all_same_type st exs)
+						e:rest = exs
+				_ -> v
+					where
+						e:rest = exs
+						v1 = all_same_type st exs
+						v2 = valid_input_type op e st
+						v = v1 && v2)
 					
 checkProg :: M_prog -> Bool
 checkProg (M_prog (decls, stmts)) = v
@@ -169,8 +196,10 @@ checkStmt stmt (n,st) = case stmt of
 		where 	
 			x = look_up st name 
 			I_VARIABLE (_,_,v_type,_) = look_up st name 
+			v1 = checkExpr exp st
 			e_type = get_type exp st
-			v = v_type == e_type 
+			v2 = v_type == e_type 
+			v = v1 && v2
 	M_while (exp, stmt) -> (n',st', exp' && stmt')
 		where
 			exp' = checkExpr exp st
