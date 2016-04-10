@@ -125,10 +125,13 @@ checkProg (M_prog (decls, stmts)) = v
 
 checkDecls :: [M_decl] -> (Int, ST) -> (Int, ST, Bool)
 checkDecls [] (n,st) = (n, st, True)
-checkDecls (decl:decls) (n,st) = (n2,st2,v)
+checkDecls d_list@(decl:decls) (n,st) = (n2,st2,v)
      where 
-		(n1,st1,v1) = checkDecl decl (n,st)
-		(n2,st2,v2) = checkDecls decls (n1,st1)
+		v_list = filter (\a -> is_var a) d_list
+		f_list = filter (\a -> not (is_var a)) d_list 		
+		(decl':decls') = v_list ++ f_list
+		(n1,st1,v1) = checkDecl decl' (n,st)
+		(n2,st2,v2) = checkDecls decls' (n1,st1)
 		v = v1 && v2
 		
 checkDecl :: M_decl -> (Int, ST) -> (Int, ST, Bool)
@@ -192,9 +195,10 @@ checkStmts (stmt:rest) (n,st) = v
 			
 checkStmt :: M_stmt -> (Int,ST) -> (Int, ST, Bool)
 checkStmt stmt (n,st) = case stmt of
-	M_ass (name, arrs, exp) -> (n,st,v)
+	M_ass (name, arrs, exp) -> (case (look_up st name) of
+		I_VARIABLE (_,_,v_type,_) -> (n,st,v)
+		I_FUNCTION _ -> (n,st,False))
 		where 	
-			x = look_up st name 
 			I_VARIABLE (_,_,v_type,_) = look_up st name 
 			v1 = checkExpr exp st
 			e_type = get_type exp st

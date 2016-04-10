@@ -1,0 +1,12 @@
+% funcs in blocks, funcs/vars with same name
+% should fail: integer OR integer,   float + int
+
+var a:bool;
+var temp:int;
+
+begin
+	read temp;
+	a := 1 || 2;
+	temp := ceil(12.0);
+	a := true > 1;
+end

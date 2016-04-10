@@ -84,3 +84,8 @@ return_type (s:rest) = case sT of
 	where 
 		Symbol_table (sT,_,_,_) = s
 
+is_var :: M_decl -> Bool
+is_var m = case m of 
+	M_var _ -> True
+	_ -> False
+	

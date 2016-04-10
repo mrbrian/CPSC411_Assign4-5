@@ -15,8 +15,11 @@ processDecls :: [M_decl] -> (Int, ST) -> ([I_fbody], Int, [(Int, [I_expr])], (In
 processDecls [] (n,st) = ([], 0, [], (n, st))
 processDecls (decl:decls) (n,st) = (funcs, num_vars, arrays, (n'', st''))
      where 
-		(funcs1, num_vars1, arrays1, (n', st')) = processDecl decl (n,st)
-		(funcs2, num_vars2, arrays2, (n'', st'')) = processDecls decls (n',st')
+		v_list = filter (\a -> is_var a) (decl:decls)
+		f_list = filter (\a -> not (is_var a)) (decl:decls)
+		(decl':decls') = v_list ++ f_list
+		(funcs1, num_vars1, arrays1, (n', st')) = processDecl decl' (n,st)
+		(funcs2, num_vars2, arrays2, (n'', st'')) = processDecls decls' (n',st')
 		funcs = funcs1 ++ funcs2
 		num_vars = num_vars1 + num_vars2
 		arrays = arrays1 ++ arrays2
