@@ -36,7 +36,7 @@ stmt
 -}
 
 loadI n = "LOAD_I " ++ (show n)
-loadR s = "LOAD_R " ++ s
+loadR s = "LOAD_R " ++ (show s)
 loadB n = "LOAD_B " ++ (show n)
 loadO n = "LOAD_O " ++ (show n)
 
@@ -47,6 +47,9 @@ readB = "READ_B"
 storeI s = "STORE_I "  ++ s
 storeR s = "STORE_R "  ++ s
 storeB s = "STORE_B "  ++ s
+storeO lvl offs = "STORE_O " ++ (show lvl) ++ (show offs)
+
+addF = "ADD_F"
 
 jump s = "JUMP " ++ s
 jumpS = "JUMP_S"
@@ -66,11 +69,29 @@ codeGen_Fun :: I_fbody -> [String]
 codeGen_Fun (IFUN (label, fb, vars, args, arrays, stmts)) = caller ++ init ++ exit
 --(String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
 	where
-		caller = [alloc 1, loadR "%fp", loadR "%fp", loadO (-1), loadO (-1), storeR "%cp", jump label]
+		caller = [alloc 1, loadR "%fp", loadR "%fp", loadO (-1), loadO (-1), 
+			storeR "%cp", jump label]
 		init = []--[label, lordR "%sp", storeR "%fp", alloc m, loadI m+3]
 		exit = [loadR "%fp", --store.., 
 			loadR "%fp", --loadO 0, 
 			loadR "%fp", jumpS]
+
+codegen_LoadExpr :: I_expr -> [String]
+codegen_LoadExpr e = case e of
+	IINT x -> [loadI x]
+        IREAL x -> [loadR x]
+        IBOOL x -> [loadB x]
+        IID (0,offs,es) -> [loadO offs]
+--        IID (lvl,offs,es) -> [loadO]
+	         --  identifier (<level>,<offset>,<array indices>)
+        IAPP (op,es) -> [codegen_LoadExprs es, op_str]
+
+  --      ISIZE (lvl,offs,dim) -> 
+        	
+
+codegen_LoadExprs :: [I_expr] -> [String]
+codegen_LoadExprs [] = []
+codegen_LoadExprs (e:rest) = (codegen_LoadExpr e)++(codegen_LoadExprs rest)
 
 codegen_Expr :: I_expr -> [String]
 codegen_Expr e = case e of
@@ -78,13 +99,44 @@ codegen_Expr e = case e of
 	IREAL x -> [show x]
 	IBOOL x -> [show x]
 	{-IID       (Int,Int,[I_expr])   
-	--  identifier (<level>,<offset>,<array indices>)
-	IAPP      (I_opn,[I_expr])
-	ISIZE     (Int,Int,Int)-}
+	--  identifier (<level>,<offset>,<array indices>)-}
+	IAPP (op, es) -> case op of
+--		ICALL (String,Int)
+		IADD_F -> (codegen_LoadExprs es) ++ [addF]
+			where
+				load = codegen_LoadExprs es
+		{-IMUL_F 
+		ISUB_F 
+		IDIV_F 
+		INEG_F
+		ILT_F  
+		ILE_F  
+		IGT_F  
+		IGE_F  
+		IEQ_F          
+		IADD 
+		IMUL 
+		ISUB 
+		IDIV 
+		INEG
+		ILT  
+		ILE  
+		IGT  
+		IGE  
+		IEQ            
+		INOT 
+		IAND 
+		IOR 
+		IFLOAT 
+		ICEIL 
+		IFLOOR-}
+		
+
+--	ISIZE     (Int,Int,Int)
 				   
 codegen_Stmt :: I_stmt -> [String]
 codegen_Stmt s = case s of
-	IASS (lvl,off,es,e) -> [loadI ""]
+	IASS (lvl,off,es,e) -> (codegen_LoadExprs es) ++ (codegen_LoadExpr e) ++ [storeO lvl off]
 		{-where
 			codegen_Expr e
 	IWHILE (I_expr,I_stmt)
@@ -122,5 +174,16 @@ codegen_Prog (IPROG (fbs,vars,c,stmts)) = printlist prog
 		body = codegen_Stmts stmts
 		exit = []--indent [loadR "%fp" , load0 (vars+1), app "NEG" , allocS
 			--, alloc -3, halt]
-		
-test = codeGen_Fun (IFUN ("funky", [], 1, 0, [], [])) 
+stmts = IASS(0,1, [ IAPP(IADD_F,[IINT 1, IINT 2]) ], IINT 0)	
+fbody = [] --IFUN ("funky", [], 2, 0, [], [stmts])
+prog = IPROG (fbody, 2, [], [stmts])
+test = codegen_Prog prog
+	
+
+
+
+
+
+
+
+
