@@ -1,0 +1,37 @@
+IPROG
+  ( [ IFUN
+        ( "fn1"
+        , []
+        , 1
+        , 1
+        , []
+        , [ ICOND
+              ( IAPP ( IEQ , [ IID ( 0 , -4 , [] ) , IINT 0 ] )
+              , IASS ( 0 , 1 , [] , IINT 1 )
+              , IASS
+                  ( 0
+                  , 1
+                  , []
+                  , IAPP
+                      ( IMUL
+                      , [ IID ( 1 , 1 , [] )
+                        , IAPP
+                            ( ICALL ( "fn1" , 1 )
+                            , [ IAPP ( ISUB , [ IID ( 0 , -4 , [] ) , IINT 1 ] )
+ ]
+                            )
+                        ]
+                      )
+                  )
+              )
+          , IRETURN (IID ( 0 , 1 , [] ))
+          ]
+        )
+    ]
+  , 2
+  , []
+  , [ IREAD_I ( 0 , 1 , [] )
+    , IREAD_I ( 0 , 2 , [] )
+    , IPRINT_I (IAPP ( ICALL ( "fn1" , 0 ) , [ IID ( 0 , 2 , [] ) ] ))
+    ]
+  )

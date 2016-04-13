@@ -1,0 +1,35 @@
+read 2 vars then exec 
+call print exp(y)
+
+
+
+
+genProg_Code :: I_prog -> String
+genProg_Code (IPROG(funs, nloc, stmts))=
+	where 
+	prog = init ++ body ++ exit ++ fbody
+			
+	init = [loadR "%sp", loadR "%sp", storeR "%fp"
+			,alloc vars, loadI (vars + 2)]
+	body = compileStmts stmts
+	exit = indent [loadR "%fp" , load0 (vars+1), app "NEG" , allocS
+	
+	
+compileFunction (I_FUN (name, funs , lvar, args, body)) = concat {
+lbl
+, indent init
+, functionBody,
+end,
+function]
+where
+lbl = [label name
+init =[comment (loadR sp) "\t\tFunc initiation",
+storeR "%fp",
+]
+
+
+
+loop
+break
+indent
+stmt
