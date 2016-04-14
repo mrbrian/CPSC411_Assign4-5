@@ -1,0 +1,5 @@
+var x[6][9]:int;
+
+begin
+	print size(x);
+end

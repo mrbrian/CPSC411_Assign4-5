@@ -6,6 +6,8 @@ import Text.PrettyPrint.GenericPretty
 
 indent = "\t\t"
 neg 	= "NEG"
+mul 	= "MUL"
+add 	= "ADD"
 loadI n = indent ++ "LOAD_I " ++ (show n)
 loadR s = indent ++ "LOAD_R " ++ s
 loadF s = indent ++ "LOAD_F " ++ (show s)
@@ -41,6 +43,30 @@ halt = indent ++ "HALT"
 
 comment :: String -> String
 comment s = "%" ++ s
+	
+codegen_Array :: Int -> Int -> (Int,[I_expr]) -> [String]
+codegen_Array _ 0 _ = error "codegen_Array: dont use zero here"
+codegen_Array m dims (m_a,e:[]) = s1 ++ s2 ++ s3
+	where
+		s1 = codegen_Expr e		-- put on stack
+		s2 = [loadR "%fp", loadO m_a, 
+			loadO 1, loadR "%fp", 
+			loadO m_a, loadO dims,
+			app mul, loadR "%fp",
+			loadO (m+1), loadI dims,
+			loadR "%fp", --loadO wtf is a_I,
+			loadO 3, app add, app add,
+			loadR "%fp", storeO (m+1)]
+		s3 = [allocS]
+codegen_Array m dims (m_a,(e:es)) = s1 ++ s2 ++ (codegen_Array m (dims+1) (m_a,es))
+	where
+		s1 = codegen_Expr e 	-- first dimension on stack
+		s2 = [loadR "%sp", loadR "%fp", storeO m_a]  -- make array pointer
+		
+		
+codegen_Arrays :: Int -> [(Int,[I_expr])] -> [String]
+codegen_Arrays m [] = []
+codegen_Arrays m (a:rest) = (codegen_Array m 1 a)++(codegen_Arrays m rest)
 
 codegen_Fun :: Int -> I_fbody -> (Int, [String])
 codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) = 
@@ -52,7 +78,7 @@ codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) =
 		com 	= [comment "func start"]
 		lbl 	= [label++":"]
 		init 	= [loadR "%sp", storeR "%fp", alloc n]
-		array 	= []
+		array	= codegen_Arrays m arrays
 		ret_val = [loadR "%fp", storeO (-(n+3))]
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
 		exit 	= [alloc (-(m+1))]
@@ -63,8 +89,7 @@ codegen_Funs n [] = (n, [])
 codegen_Funs n (f:fs) = (n2, s1 ++ s2)
 	where 
 		(n1, s1) = codegen_Fun n f
-		(n2, s2) = codegen_Funs n1 fs
-						
+		(n2, s2) = codegen_Funs n1 fs						
 
 codegen_Exprs :: [I_expr] -> [String]
 codegen_Exprs [] = []
@@ -81,7 +106,11 @@ codegen_Expr e = case e of
 	IREAL x -> [loadF x]
 	IBOOL x -> [loadB x]
 	IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
---	ISIZE     (Int,Int,Int)				
+	ISIZE (lvl,off,dim)	-> fp++ld
+		where
+			fp = get_static_link lvl
+			ld = [loadO off]
+			
 	IAPP (op, es) -> (case op of
 		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ call
 			where
@@ -172,11 +201,12 @@ printlist (s:rest) = s ++ "\n" ++ (printlist rest)
 
 
 codegen_Prog :: I_prog -> String
-codegen_Prog (IPROG (fbs,vars,c,stmts)) = printlist prog
+codegen_Prog (IPROG (fbs,vars,arrays,stmts)) = printlist prog
 	where
-		prog = init ++ body ++ exit ++ funs
+		prog = init ++ array ++ body ++ exit ++ funs
 				
 		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars]
+		array = codegen_Arrays vars arrays
 		body = (comment "body begin"):sts
 		(n1, sts) = codegen_Stmts 1 stmts
 		(n2, funs) = codegen_Funs n1 fbs
