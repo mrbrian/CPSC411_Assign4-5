@@ -111,7 +111,7 @@ codegen_Expr e = case e of
 	ISIZE (lvl,off,dim)	-> fp ++ ld
 		where
 			fp = get_static_link lvl
-			ld = [loadO off, loadO (dim-1)]
+			ld = [loadO off, loadO dim]
 			
 	IAPP (op, es) -> (case op of
 		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ call
