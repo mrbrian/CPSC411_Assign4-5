@@ -1,7 +1,7 @@
-all: a4
+all: a5
 
-a4: 
-	ghc --make Assign4.hs
+a5: 
+	ghc --make Assign5.hs
 
 clean: 
-	rm -f Assign4.hi Assign4.o
+	rm -f Assign5.hi Assign5.o
