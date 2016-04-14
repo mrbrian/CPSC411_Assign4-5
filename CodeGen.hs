@@ -25,7 +25,7 @@ end,
 function]
 where
 lbl = [label name
-init =[comment (loadR sp) "\t\tFunc initiation",
+init =[comment (loadR sp) indent ++ "\tFunc initiation",
 storeR "%fp",
 ]
 
@@ -35,40 +35,42 @@ indent
 stmt
 -}
 
-loadI n = "LOAD_I " ++ (show n)
-loadR s = "LOAD_R " ++ s
-loadF s = "LOAD_F " ++ (show s)
-loadB n = "LOAD_B " ++ (show n)
-loadO n = "LOAD_O " ++ (show n)
-loadOS = "LOAD_OS"
+indent = "\t\t"
+neg 	= "NEG"
+loadI n = indent ++ "LOAD_I " ++ (show n)
+loadR s = indent ++ "LOAD_R " ++ s
+loadF s = indent ++ "LOAD_F " ++ (show s)
+loadB n = indent ++ "LOAD_B " ++ (show n)
+loadO n = indent ++ "LOAD_O " ++ (show n)
+loadOS = indent ++ "LOAD_OS"
 
-readI = "READ_I"
-readF = "READ_F"
-readB = "READ_B"
+readI = indent ++ "READ_I"
+readF = indent ++ "READ_F"
+readB = indent ++ "READ_B"
 
-printI = "PRINT_I"
-printF = "PRINT_F"
-printB = "PRINT_B"
+printI = indent ++ "PRINT_I"
+printF = indent ++ "PRINT_F"
+printB = indent ++ "PRINT_B"
 
-storeI s = "STORE_I "  ++ s
-storeR s = "STORE_R "  ++ s
-storeB s = "STORE_B "  ++ s
-storeO n = "STORE_O " ++ (show n) 
+storeI s = indent ++ "STORE_I "  ++ s
+storeR s = indent ++ "STORE_R "  ++ s
+storeB s = indent ++ "STORE_B "  ++ s
+storeO n = indent ++ "STORE_O " ++ (show n) 
 
 
-jump s = "JUMP " ++ s
-jumpS = "JUMP_S"
-jumpC = "JUMP_C"
+jump s = indent ++ "JUMP " ++ s
+jumpS = indent ++ "JUMP_S"
+jumpC = indent ++ "JUMP_C"
 
 label s = "label" ++ (show s) ++ ":"
-alloc n = "ALLOC "  ++ (show n)
-allocS = "ALLOC_S"
+alloc n = indent ++ "ALLOC "  ++ (show n)
+allocS = indent ++ "ALLOC_S"
 
-app s = "APP " ++ s
-halt = "HALT"
+app s = indent ++ "APP " ++ s
+halt = indent ++ "HALT"
 
 comment :: String -> String
-comment s = "%" ++ s ++ "\n"
+comment s = "%" ++ s
 
 {-
 codegen_function :: I_fbody -> String
@@ -86,7 +88,7 @@ codegen_Array (n, s:rest) =
 -}
 codegen_Fun :: Int -> I_fbody -> (Int, [String])
 codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) = 
-		(x1, com ++ lbl ++ (indent(init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore)))
+		(x1, com ++ lbl ++ (init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore))
 		
 --(String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
 	where
@@ -94,14 +96,12 @@ codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) =
 		n = args
 		m = vars
 		com 	= [comment "func start"]
-		--caller 	= [loadR "%sp", storeR "%fp", alloc 1, loadR "%fp", loadO (-args), loadI 0, 
---				storeR "%cp", jump label]
 		lbl 	= [label++":"]
 		init 	= [loadR "%sp", storeR "%fp", alloc n, loadI (n+2)]
 		array 	= []
 		ret_val = [loadR "%fp", storeO (-(n+3))]
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
-		exit 	= [loadR "%fp", loadO (m+1), app "NEG", allocS]
+		exit 	= [loadR "%fp", loadO (m+1), app neg, allocS]
 		restore = [storeR "%fp", alloc (-n), jumpS]
 
 codegen_Funs :: Int -> [I_fbody] -> (Int, [String])
@@ -117,9 +117,7 @@ codegen_LoadExpr e = case e of
 	IINT x -> [loadI x]
         IREAL x -> [loadF x]
         IBOOL x -> [loadB x]
-        IID (0,offs,es) -> [loadR "%fp", loadO offs] 
---        IID (lvl,offs,es) -> [loadO]
-	         --  identifier (<level>,<offset>,<array indices>)
+        IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
         IAPP (op,es) -> codegen_LoadExprs es
 
   --      ISIZE (lvl,offs,dim) -> 
@@ -131,7 +129,7 @@ codegen_LoadExprs (e:rest) = (codegen_LoadExpr e)++(codegen_LoadExprs rest)
 
 get_static_link :: Int -> [String] 
 get_static_link 0 = [loadR "%fp"]
-get_static_link n = (loadO (-2)) : (get_static_link (n-1))
+get_static_link n = (get_static_link (n-1))++[loadO (-2)]
 		
 
 codegen_Expr :: I_expr -> [String]
@@ -142,14 +140,14 @@ codegen_Expr e = case e of
 	{-IID       (Int,Int,[I_expr])   
 	--  identifier (<level>,<offset>,<array indices>)-}
 	IAPP (op, es) -> (case op of
-		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ after
+		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ call
 			where
 				cmt = comment "call"
 				m = length es
 				init 	= codegen_LoadExprs es
 				before 	= [alloc 1, loadR "%fp"] 
 				static 	= get_static_link lvls
-				after 	= [loadR "%cp", jump label]
+				call 	= [loadR "%cp", jump label]
 
 					--loadR "%sp", storeR "%fp", alloc m, loadI (m+1)]
 					-- how to get the number of variables from here?
@@ -213,9 +211,9 @@ codegen_Stmt n s = case s of
 	IPRINT_I x -> (n, (codegen_Expr x) ++ [printI])
 	IPRINT_B x -> (n, (codegen_Expr x) ++ [printB])
 
-	--IRETURN e -> [alloc -vars, jump] 	-- .. where to get vars from??
-	{-
-	IBLOCK (fbodies,vars,arrs,stmts) -> [pre] ++ enter ++ exit
+	IRETURN e -> (n, [loadR "%fp", loadO (-1), app "NEG", allocS, jumpS])
+	
+	IBLOCK (fbodies,vars,arrs,stmts) -> (n1,[pre] ++ enter ++ body ++ exit)
 		where
 			m = vars
 			pre = comment "Block begin"
@@ -223,19 +221,16 @@ codegen_Stmt n s = case s of
 			enter = [loadR "%fp", alloc 1, loadR "%sp", storeR "%fp", 
 				alloc m, loadI (m+2), --codegen_LoadExprs arr_exps, 
 				allocS]
-			body = ["body here"]
-			exit = [loadR "%fp", loadO (m+1), app "NEG", allocS]
-	-}
+			(n1,body) = codegen_Stmts n stmts
+			exit = [loadR "%fp", loadO (m+1), app neg, allocS]
+	
 codegen_Stmts :: Int -> [I_stmt] -> (Int,[String])
 codegen_Stmts n [] = (n, [])
 codegen_Stmts n (s:rest) = (n2, first++next)
 	where
 		(n1,first) = codegen_Stmt n s
 		(n2, next) = codegen_Stmts n1 rest
-		
-indent :: [String] -> [String]
-indent strs = map (\a -> "\t" ++ a) strs
-		
+				
 		
 printlist :: [String] -> String
 printlist [] = ""
@@ -247,12 +242,11 @@ codegen_Prog (IPROG (fbs,vars,c,stmts)) = printlist prog
 	where
 		prog = init ++ body ++ exit ++ funs
 				
-		init = indent [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars, loadI (vars + 2)]
-		body = (comment "body begin"):(indent sts)
+		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars]
+		body = (comment "body begin"):sts
 		(n1, sts) = codegen_Stmts 0 stmts
 		(n2, funs) = codegen_Funs n1 fbs
-		exit = indent [loadR "%fp" , loadO (vars+1), app "NEG"]--, 
-			--allocS, alloc (-3), halt]
+		exit = [alloc (-(vars+1)), halt]
 			
 stmts = IASS(0,1, [ IAPP(IADD_F,[IINT 1, IINT 2]) ], IINT 0)	
 fbody = [] --IFUN ("funky", [], 2, 0, [], [stmts])
