@@ -44,18 +44,20 @@ halt = indent ++ "HALT"
 comment :: String -> String
 comment s = "%" ++ s
 	
+load_dim :: Int -> Int -> [String]
+load_dim m_a 1 = [loadR "%fp", loadO m_a, loadO 0]
+load_dim m_a dim = [loadR "%fp", loadO m_a, loadO (dim-1)] ++ (load_dim m_a (dim-1)) ++ [app mul]
+
 codegen_Array :: Int -> Int -> (Int,[I_expr]) -> [String]
 codegen_Array _ 0 _ = error "codegen_Array: dont use zero here"
 codegen_Array m dims (m_a,e:[]) = s1 ++ s2 ++ s3
 	where
 		s1 = codegen_Expr e		-- put on stack
-		s2 = [loadR "%fp", loadO m_a, 
-			loadO 1, loadR "%fp", 
-			loadO m_a, loadO dims,
-			app mul, loadR "%fp",
-			loadO (m+1), loadI dims,
-			loadR "%fp", --loadO wtf is a_I,
-			loadO 3, app add, app add,
+		s2 = (load_dim m_a dims) ++		-- array dims, and array size on stack
+			[loadR "%fp", loadO (m+1), -- dealloc counter .... where the 6 is??
+			loadI dims,					
+			loadR "%fp", loadO m_a,	loadO 3, 	-- array size..
+			app add, app add,
 			loadR "%fp", storeO (m+1)]
 		s3 = [allocS]
 codegen_Array m dims (m_a,(e:es)) = s1 ++ s2 ++ (codegen_Array m (dims+1) (m_a,es))
@@ -176,7 +178,7 @@ codegen_Stmt n s = case s of
 	IPRINT_I x -> (n, (codegen_Expr x) ++ [printI])
 	IPRINT_B x -> (n, (codegen_Expr x) ++ [printB])
 	IRETURN e -> (n, codegen_Expr e)		-- just put return value on stack	
-	IBLOCK (fbodies,vars,arrs,stmts) -> (n1,[pre] ++ enter ++ body ++ exit)
+	IBLOCK (fbodies,vars,arrs,stmts) -> (n1, [pre] ++ enter ++ body ++ exit)
 		where
 			m = vars
 			pre = comment "Block begin"
@@ -205,12 +207,12 @@ codegen_Prog (IPROG (fbs,vars,arrays,stmts)) = printlist prog
 	where
 		prog = init ++ array ++ body ++ exit ++ funs
 				
-		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars]
-		array = codegen_Arrays vars arrays
-		body = (comment "body begin"):sts
-		(n1, sts) = codegen_Stmts 1 stmts
-		(n2, funs) = codegen_Funs n1 fbs
-		exit = [alloc (-(vars+1)), halt]
+		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc (vars+1)]
+		array 		= codegen_Arrays vars arrays
+		body 		= (comment "body begin"):sts
+		(n1, sts) 	= codegen_Stmts 1 stmts
+		(n2, funs) 	= codegen_Funs n1 fbs
+		exit 		= [alloc (-(vars+1)), halt]
 			
 stmts = IASS(0,1, [ IAPP(IADD_F,[IINT 1, IINT 2]) ], IINT 0)	
 fbody = [] --IFUN ("funky", [], 2, 0, [], [stmts])
