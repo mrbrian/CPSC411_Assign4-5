@@ -29,6 +29,11 @@ main = do
 			let ir = processProg ast
 			let code = codegen_Prog ir
 			(case type_check of
-				True -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check passed!\n\n" ++ (ppShow ir) ++ conts ++ "\n" ++ code)
+				True -> do
+					putStrLn $ ((ppShow ast) ++ "\n\nSemantic check passed!\n\n" ++ (ppShow ir) ++ conts ++ "\n" ++ code)					
+					writeFile "output" code
 				False -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check failed.\n\n"))
 		Bad msg-> putStrLn msg
+
+		
+		
