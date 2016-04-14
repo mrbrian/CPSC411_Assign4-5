@@ -57,12 +57,13 @@ storeR s = indent ++ "STORE_R "  ++ s
 storeB s = indent ++ "STORE_B "  ++ s
 storeO n = indent ++ "STORE_O " ++ (show n) 
 
-
 jump s = indent ++ "JUMP " ++ s
 jumpS = indent ++ "JUMP_S"
-jumpC = indent ++ "JUMP_C"
+jumpC s = indent ++ "JUMP_C " ++ s
 
-label s = "label" ++ (show s) ++ ":"
+label s = "label" ++ (show s)
+label_colon s = (label s) ++ ":"
+
 alloc n = indent ++ "ALLOC "  ++ (show n)
 allocS = indent ++ "ALLOC_S"
 
@@ -97,7 +98,7 @@ codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) =
 		m = vars
 		com 	= [comment "func start"]
 		lbl 	= [label++":"]
-		init 	= [loadR "%sp", storeR "%fp", alloc n, loadI (n+2)]
+		init 	= [loadR "%sp", storeR "%fp", alloc n]--, loadI (n+2)]
 		array 	= []
 		ret_val = [loadR "%fp", storeO (-(n+3))]
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
@@ -110,22 +111,11 @@ codegen_Funs n (f:fs) = (n2, s1 ++ s2)
 	where 
 		(n1, s1) = codegen_Fun n f
 		(n2, s2) = codegen_Funs n1 fs
-			
-			
-codegen_LoadExpr :: I_expr -> [String]
-codegen_LoadExpr e = case e of
-	IINT x -> [loadI x]
-        IREAL x -> [loadF x]
-        IBOOL x -> [loadB x]
-        IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
-        IAPP (op,es) -> codegen_LoadExprs es
+						
 
-  --      ISIZE (lvl,offs,dim) -> 
-        	
-
-codegen_LoadExprs :: [I_expr] -> [String]
-codegen_LoadExprs [] = []
-codegen_LoadExprs (e:rest) = (codegen_LoadExpr e)++(codegen_LoadExprs rest)
+codegen_Exprs :: [I_expr] -> [String]
+codegen_Exprs [] = []
+codegen_Exprs (e:rest) = (codegen_Expr e)++(codegen_Exprs rest)
 
 get_static_link :: Int -> [String] 
 get_static_link 0 = [loadR "%fp"]
@@ -134,52 +124,52 @@ get_static_link n = (get_static_link (n-1))++[loadO (-2)]
 
 codegen_Expr :: I_expr -> [String]
 codegen_Expr e = case e of
-	IINT x 	-> [show x]
-	IREAL x -> [show x]
-	IBOOL x -> [show x]
-	{-IID       (Int,Int,[I_expr])   
+	IINT x -> [loadI x]
+	IREAL x -> [loadF x]
+	IBOOL x -> [loadB x]
+	IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
 	--  identifier (<level>,<offset>,<array indices>)-}
 	IAPP (op, es) -> (case op of
 		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ call
 			where
 				cmt = comment "call"
 				m = length es
-				init 	= codegen_LoadExprs es
-				before 	= [alloc 1, loadR "%fp"] 
+				init 	= codegen_Exprs es
+				before 	= [alloc 1] 
 				static 	= get_static_link lvls
-				call 	= [loadR "%cp", jump label]
+				call 	= [loadR "%fp", loadR "%cp", jump label]
 
 					--loadR "%sp", storeR "%fp", alloc m, loadI (m+1)]
 					-- how to get the number of variables from here?
-		IADD_F -> load ++ ["APP ADD_F"]
-		IMUL_F -> load ++ ["APP MUL_F"]
-		ISUB_F -> load ++ ["APP SUB_F"]
-		IDIV_F -> load ++ ["APP DIV_F"]
-		INEG_F -> load ++ ["APP NEG_F"]
-		ILT_F  -> load ++ ["APP LT_F" ]
-		ILE_F  -> load ++ ["APP LE_F" ]
-		IGT_F  -> load ++ ["APP GT_F" ]
-		IGE_F  -> load ++ ["APP GE_F" ]
-		IEQ_F  -> load ++ ["APP EQ_F" ]
-		IADD   -> load ++ ["APP ADD" ]
-		IMUL   -> load ++ ["APP MUL"]
-		ISUB   -> load ++ ["APP SUB"]
-		IDIV   -> load ++ ["APP DIV"]
-		INEG   -> load ++ ["APP NEG"]
-		ILT    -> load ++ ["APP LT"]
-		ILE    -> load ++ ["APP LE"]
-		IGT    -> load ++ ["APP GT"]
-		IGE    -> load ++ ["APP GE"]
-		IEQ    -> load ++ ["APP EQ"]
-		INOT   -> load ++ ["APP NOT"]
-		IOR    -> load ++ ["APP OR"]
-		IAND   -> load ++ ["APP AND"]
-		IFLOAT -> load ++ ["APP FLOAT"]
-		ICEIL  -> load ++ ["APP CEIL"]
-		IFLOOR -> load ++ ["APP FLOOR"]
+		IADD_F -> load ++ [app "ADD_F"]
+		IMUL_F -> load ++ [app "MUL_F"]
+		ISUB_F -> load ++ [app "SUB_F"]
+		IDIV_F -> load ++ [app "DIV_F"]
+		INEG_F -> load ++ [app "NEG_F"]
+		ILT_F  -> load ++ [app "LT_F" ]
+		ILE_F  -> load ++ [app "LE_F" ]
+		IGT_F  -> load ++ [app "GT_F" ]
+		IGE_F  -> load ++ [app "GE_F" ]
+		IEQ_F  -> load ++ [app "EQ_F" ]
+		IADD   -> load ++ [app "ADD" ]
+		IMUL   -> load ++ [app "MUL"]
+		ISUB   -> load ++ [app "SUB"]
+		IDIV   -> load ++ [app "DIV"]
+		INEG   -> load ++ [app "NEG"]
+		ILT    -> load ++ [app "LT"]
+		ILE    -> load ++ [app "LE"]
+		IGT    -> load ++ [app "GT"]
+		IGE    -> load ++ [app "GE"]
+		IEQ    -> load ++ [app "EQ"]
+		INOT   -> load ++ [app "NOT"]
+		IOR    -> load ++ [app "OR"]
+		IAND   -> load ++ [app "AND"]
+		IFLOAT -> load ++ [app "FLOAT"]
+		ICEIL  -> load ++ [app "CEIL"]
+		IFLOOR -> load ++ [app "FLOOR"]
 		)
 			where
-				load = codegen_LoadExprs es
+				load = codegen_Exprs es
 		
 --	ISIZE     (Int,Int,Int)
 				
@@ -189,18 +179,19 @@ get_level_offset n = 0  --(get_level_offset n - 1) + (loadO nkd)
 			
 codegen_Stmt :: Int -> I_stmt -> (Int, [String])
 codegen_Stmt n s = case s of
-	IASS (lvl,off,es,e) -> (n, fp ++ a ++ b ++ c)
+	IASS (lvl,off,es,e) -> (n, a ++ fp ++ b ++ c)
 		where
-			fp = []--[get_level_offset (loadR "%fp")] 
-			a = codegen_LoadExprs es
-			b = codegen_LoadExpr e 
+			fp = get_static_link lvl
+			a = codegen_Expr e 
+			b = codegen_Exprs es
 			c = [storeO off]
-	IWHILE (e,stmt) -> (n1, [label n] ++ (codegen_LoadExpr e) ++ [jumpC] ++
+	IWHILE (e,stmt) -> (n1, [label_colon n] ++ (codegen_Expr e) ++ [jumpC (label n)] ++
 			exp ++ [jump (label n)])
 		where
 			(n1,exp) = codegen_Stmt (n+1) stmt
-	ICOND (e,s1,s2) 	-> (n2, (codegen_LoadExpr e) ++ [jumpC] ++ exp1 ++
-			[label n] ++ exp2)	
+	ICOND (e,s1,s2) -> (n2, (codegen_Expr e) ++ [jumpC (label n)] ++ exp1 ++ 
+			[jump (label (n+1))] ++
+			[label_colon n] ++ exp2 ++ [label_colon (n+1)])	
 		where
 			(n1,exp1) 	= codegen_Stmt (n+1) s1
 			(n2,exp2) 	= codegen_Stmt n1 s2
@@ -211,7 +202,7 @@ codegen_Stmt n s = case s of
 	IPRINT_I x -> (n, (codegen_Expr x) ++ [printI])
 	IPRINT_B x -> (n, (codegen_Expr x) ++ [printB])
 
-	IRETURN e -> (n, [loadR "%fp", loadO (-1), app "NEG", allocS, jumpS])
+	IRETURN e -> (n, (codegen_Expr e) ++ [app neg, allocS, jumpS])
 	
 	IBLOCK (fbodies,vars,arrs,stmts) -> (n1,[pre] ++ enter ++ body ++ exit)
 		where
@@ -219,7 +210,7 @@ codegen_Stmt n s = case s of
 			pre = comment "Block begin"
 			--arr_exps = map (\(n, es) -> es) arrs
 			enter = [loadR "%fp", alloc 1, loadR "%sp", storeR "%fp", 
-				alloc m, loadI (m+2), --codegen_LoadExprs arr_exps, 
+				alloc m, loadI (m+2), --codegen_Exprs arr_exps, 
 				allocS]
 			(n1,body) = codegen_Stmts n stmts
 			exit = [loadR "%fp", loadO (m+1), app neg, allocS]
@@ -244,7 +235,7 @@ codegen_Prog (IPROG (fbs,vars,c,stmts)) = printlist prog
 				
 		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars]
 		body = (comment "body begin"):sts
-		(n1, sts) = codegen_Stmts 0 stmts
+		(n1, sts) = codegen_Stmts 1 stmts
 		(n2, funs) = codegen_Funs n1 fbs
 		exit = [alloc (-(vars+1)), halt]
 			
