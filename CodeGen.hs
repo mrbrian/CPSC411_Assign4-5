@@ -4,37 +4,6 @@ import IR
 import Text.PrettyPrint
 import Text.PrettyPrint.GenericPretty
 
-
-{-
-genProg_Code :: I_prog -> String
-genProg_Code (IPROG(funs, nloc, stmts))=
-	where 
-	prog = init ++ body ++ exit ++ fbody
-			
-	init = [loadR "%sp", loadR "%sp", storeR "%fp"
-			,alloc vars, loadI (vars + 2)]
-	body = compileStmts stmts
-	exit = indent [loadR "%fp" , load0 (vars+1), app "NEG" , allocS
-	
-	
-compileFunction (I_FUN (name, funs , lvar, args, body)) = concat {
-lbl
-, indent init
-, functionBody,
-end,
-function]
-where
-lbl = [label name
-init =[comment (loadR sp) indent ++ "\tFunc initiation",
-storeR "%fp",
-]
-
-loop
-break
-indent
-stmt
--}
-
 indent = "\t\t"
 neg 	= "NEG"
 loadI n = indent ++ "LOAD_I " ++ (show n)
@@ -73,36 +42,20 @@ halt = indent ++ "HALT"
 comment :: String -> String
 comment s = "%" ++ s
 
-{-
-codegen_function :: I_fbody -> String
-IFUN (String,[I_fbody],vars,Int,[(Int,[I_expr])],[I_stmt]) = 
-	where
-		init = [loadR "%sp", storeR "%fp", alloc vars]
-		
-		exit = indent [loadI "vars"]
-		
-	
-codegen_Array :: (Int, [I_expr]) -> [String]
-codegen_Array (n, s:rest) = 
-	[loadI s, loadR "%sp", loadR "%fp", storeO]
-	loadI 20
--}
 codegen_Fun :: Int -> I_fbody -> (Int, [String])
 codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) = 
-		(x1, com ++ lbl ++ (init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore))
-		
---(String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
+		(x1, com ++ lbl ++ (init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore))		
 	where
 		(x1, stmts') = codegen_Stmts x stmts
 		n = args
 		m = vars
 		com 	= [comment "func start"]
 		lbl 	= [label++":"]
-		init 	= [loadR "%sp", storeR "%fp", alloc n]--, loadI (n+2)]
+		init 	= [loadR "%sp", storeR "%fp", alloc n]
 		array 	= []
 		ret_val = [loadR "%fp", storeO (-(n+3))]
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
-		exit 	= [loadR "%fp", loadO (m+1), app neg, allocS]
+		exit 	= [alloc (-(m+1))]
 		restore = [storeR "%fp", alloc (-n), jumpS]
 
 codegen_Funs :: Int -> [I_fbody] -> (Int, [String])
@@ -128,7 +81,7 @@ codegen_Expr e = case e of
 	IREAL x -> [loadF x]
 	IBOOL x -> [loadB x]
 	IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
-	--  identifier (<level>,<offset>,<array indices>)-}
+--	ISIZE     (Int,Int,Int)				
 	IAPP (op, es) -> (case op of
 		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ call
 			where
@@ -138,9 +91,6 @@ codegen_Expr e = case e of
 				before 	= [alloc 1] 
 				static 	= get_static_link lvls
 				call 	= [loadR "%fp", loadR "%cp", jump label]
-
-					--loadR "%sp", storeR "%fp", alloc m, loadI (m+1)]
-					-- how to get the number of variables from here?
 		IADD_F -> load ++ [app "ADD_F"]
 		IMUL_F -> load ++ [app "MUL_F"]
 		ISUB_F -> load ++ [app "SUB_F"]
@@ -171,11 +121,6 @@ codegen_Expr e = case e of
 			where
 				load = codegen_Exprs es
 		
---	ISIZE     (Int,Int,Int)
-				
-get_level_offset :: Int -> Int
-get_level_offset 0 = 0
-get_level_offset n = 0  --(get_level_offset n - 1) + (loadO nkd)
 			
 codegen_Stmt :: Int -> I_stmt -> (Int, [String])
 codegen_Stmt n s = case s of
@@ -201,9 +146,7 @@ codegen_Stmt n s = case s of
 	IPRINT_F x -> (n, (codegen_Expr x) ++ [printF])
 	IPRINT_I x -> (n, (codegen_Expr x) ++ [printI])
 	IPRINT_B x -> (n, (codegen_Expr x) ++ [printB])
-
-	IRETURN e -> (n, (codegen_Expr e) ++ [app neg, allocS, jumpS])
-	
+	IRETURN e -> (n, codegen_Expr e)		-- just put return value on stack	
 	IBLOCK (fbodies,vars,arrs,stmts) -> (n1,[pre] ++ enter ++ body ++ exit)
 		where
 			m = vars
