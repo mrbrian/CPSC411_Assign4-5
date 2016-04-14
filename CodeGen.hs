@@ -58,8 +58,9 @@ storeO n = "STORE_O " ++ (show n)
 
 jump s = "JUMP " ++ s
 jumpS = "JUMP_S"
+jumpC = "JUMP_C"
 
-label s = s ++ ":"
+label s = "label" ++ (show s) ++ ":"
 alloc n = "ALLOC "  ++ (show n)
 allocS = "ALLOC_S"
 
@@ -83,26 +84,32 @@ codegen_Array (n, s:rest) =
 	[loadI s, loadR "%sp", loadR "%fp", storeO]
 	loadI 20
 -}
-codegen_Fun :: I_fbody -> [String]
-codegen_Fun (IFUN (label, fb, vars, args, arrays, stmts)) = 
-		(indent (com ++ caller ++ init ++ array ++ ret_val ++ ret_ptr ++ exit ++ restore))
+codegen_Fun :: Int -> I_fbody -> (Int, [String])
+codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) = 
+		(x1, com ++ lbl ++ (indent(init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore)))
+		
 --(String,[I_fbody],Int,Int,[(Int,[I_expr])],[I_stmt])
 	where
+		(x1, stmts') = codegen_Stmts x stmts
 		n = args
 		m = vars
 		com 	= [comment "func start"]
-		caller 	= [loadR "%sp", storeR "%fp", alloc 1, loadR "%fp", loadO (-args), loadI 0, 
-				storeR "%cp", jump label]
-		init 	= (label++":"):[loadR "%sp", storeR "%fp", alloc n, loadI (n+2)]
+		--caller 	= [loadR "%sp", storeR "%fp", alloc 1, loadR "%fp", loadO (-args), loadI 0, 
+--				storeR "%cp", jump label]
+		lbl 	= [label++":"]
+		init 	= [loadR "%sp", storeR "%fp", alloc n, loadI (n+2)]
 		array 	= []
 		ret_val = [loadR "%fp", storeO (-(n+3))]
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
 		exit 	= [loadR "%fp", loadO (m+1), app "NEG", allocS]
 		restore = [storeR "%fp", alloc (-n), jumpS]
 
-codegen_Funs :: [I_fbody] -> [String]
-codegen_Funs [] = []
-codegen_Funs (f:fs) = (codegen_Fun f)++(codegen_Funs fs)
+codegen_Funs :: Int -> [I_fbody] -> (Int, [String])
+codegen_Funs n [] = (n, [])
+codegen_Funs n (f:fs) = (n2, s1 ++ s2)
+	where 
+		(n1, s1) = codegen_Fun n f
+		(n2, s2) = codegen_Funs n1 fs
 			
 			
 codegen_LoadExpr :: I_expr -> [String]
@@ -135,13 +142,16 @@ codegen_Expr e = case e of
 	{-IID       (Int,Int,[I_expr])   
 	--  identifier (<level>,<offset>,<array indices>)-}
 	IAPP (op, es) -> (case op of
-		ICALL (label,lvls) -> before ++ static ++ after
+		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ after
 			where
+				cmt = comment "call"
 				m = length es
-				before = [alloc 1, loadR "%fp"] 
-				static = get_static_link lvls
-				after = [loadR "%fp", storeR "%cp", jump label,
-					loadR "%sp", storeR "%fp", alloc m, loadI (m+1)]
+				init 	= codegen_LoadExprs es
+				before 	= [alloc 1, loadR "%fp"] 
+				static 	= get_static_link lvls
+				after 	= [loadR "%cp", jump label]
+
+					--loadR "%sp", storeR "%fp", alloc m, loadI (m+1)]
 					-- how to get the number of variables from here?
 		IADD_F -> load ++ ["APP ADD_F"]
 		IMUL_F -> load ++ ["APP MUL_F"]
@@ -179,27 +189,32 @@ get_level_offset :: Int -> Int
 get_level_offset 0 = 0
 get_level_offset n = 0  --(get_level_offset n - 1) + (loadO nkd)
 			
-codegen_Stmt :: I_stmt -> [String]
-codegen_Stmt s = case s of
-	IASS (lvl,off,es,e) -> fp ++ a ++ b ++ c
+codegen_Stmt :: Int -> I_stmt -> (Int, [String])
+codegen_Stmt n s = case s of
+	IASS (lvl,off,es,e) -> (n, fp ++ a ++ b ++ c)
 		where
 			fp = []--[get_level_offset (loadR "%fp")] 
 			a = codegen_LoadExprs es
 			b = codegen_LoadExpr e 
 			c = [storeO off]
-	{-
-	IWHILE (e,stmt) -> [label, codegen_LoadExpr e, jumpC, codeGen_Stmt stmt, jump]
-	ICOND (e,s1,s2) = [codegen_LoadExpr e, jumpC, codeGen_Stmt s1, label, codeGen_Stmt s2]
-	-}
-	IREAD_F (lvl,off,es) -> [readF, loadR "%fp", storeO off]
-	IREAD_I (lvl,off,es) -> [readI, loadR "%fp", storeO off]
-	IREAD_B (lvl,off,es) -> [readB, loadR "%fp", storeO off]
-	IPRINT_F x -> (codegen_LoadExpr x) ++ [printF]
-	IPRINT_I x -> (codegen_LoadExpr x) ++ [printI]
-	IPRINT_B x -> (codegen_LoadExpr x) ++ [printB] 
+	IWHILE (e,stmt) -> (n1, [label n] ++ (codegen_LoadExpr e) ++ [jumpC] ++
+			exp ++ [jump (label n)])
+		where
+			(n1,exp) = codegen_Stmt (n+1) stmt
+	ICOND (e,s1,s2) 	-> (n2, (codegen_LoadExpr e) ++ [jumpC] ++ exp1 ++
+			[label n] ++ exp2)	
+		where
+			(n1,exp1) 	= codegen_Stmt (n+1) s1
+			(n2,exp2) 	= codegen_Stmt n1 s2
+	IREAD_F (lvl,off,es) -> (n, [readF, loadR "%fp", storeO off])
+	IREAD_I (lvl,off,es) -> (n, [readI, loadR "%fp", storeO off])
+	IREAD_B (lvl,off,es) -> (n, [readB, loadR "%fp", storeO off])
+	IPRINT_F x -> (n, (codegen_Expr x) ++ [printF])
+	IPRINT_I x -> (n, (codegen_Expr x) ++ [printI])
+	IPRINT_B x -> (n, (codegen_Expr x) ++ [printB])
 
 	--IRETURN e -> [alloc -vars, jump] 	-- .. where to get vars from??
-	
+	{-
 	IBLOCK (fbodies,vars,arrs,stmts) -> [pre] ++ enter ++ exit
 		where
 			m = vars
@@ -210,13 +225,13 @@ codegen_Stmt s = case s of
 				allocS]
 			body = ["body here"]
 			exit = [loadR "%fp", loadO (m+1), app "NEG", allocS]
-	
-codegen_Stmts :: [I_stmt] -> [String]
-codegen_Stmts [] = []
-codegen_Stmts (s:rest) = first++next
+	-}
+codegen_Stmts :: Int -> [I_stmt] -> (Int,[String])
+codegen_Stmts n [] = (n, [])
+codegen_Stmts n (s:rest) = (n2, first++next)
 	where
-		first = codegen_Stmt s
-		next = codegen_Stmts rest
+		(n1,first) = codegen_Stmt n s
+		(n2, next) = codegen_Stmts n1 rest
 		
 indent :: [String] -> [String]
 indent strs = map (\a -> "\t" ++ a) strs
@@ -233,16 +248,17 @@ codegen_Prog (IPROG (fbs,vars,c,stmts)) = printlist prog
 		prog = init ++ body ++ exit ++ funs
 				
 		init = indent [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars, loadI (vars + 2)]
-		body = (comment "body begin"):(indent (codegen_Stmts stmts))
-		funs = codegen_Funs fbs
-		exit = indent [loadR "%fp" , loadO (vars+1), app "NEG", 
-			allocS, alloc (-3), halt]
+		body = (comment "body begin"):(indent sts)
+		(n1, sts) = codegen_Stmts 0 stmts
+		(n2, funs) = codegen_Funs n1 fbs
+		exit = indent [loadR "%fp" , loadO (vars+1), app "NEG"]--, 
+			--allocS, alloc (-3), halt]
 			
 stmts = IASS(0,1, [ IAPP(IADD_F,[IINT 1, IINT 2]) ], IINT 0)	
 fbody = [] --IFUN ("funky", [], 2, 0, [], [stmts])
 prog = IPROG (fbody, 2, [], [stmts])
 test = codegen_Prog prog
-test2 = codegen_Stmt stmts
+test2 = codegen_Stmt 0 stmts
 
 
 
