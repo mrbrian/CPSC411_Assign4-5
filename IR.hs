@@ -68,9 +68,7 @@ transExpr e st = case e of
 	M_ival v -> IINT (fromIntegral v) 
 	M_rval v -> IREAL v 
 	M_bval v -> IBOOL v 
-	M_size (str, dim) -> (case dim of 
-		0	->	ISIZE (lvl, off, d + 1)
-		_	->	ISIZE (lvl, off, dim + 1))
+	M_size (str, dim) -> ISIZE (lvl, off, dim)
 		where 			
 			(I_VARIABLE (lvl, off, _, d)) = look_up st str
 	M_id (str, es) -> IID (lvl, off, es')

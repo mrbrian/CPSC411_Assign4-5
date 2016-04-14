@@ -8,10 +8,12 @@ indent = "\t\t"
 neg 	= "NEG"
 mul 	= "MUL"
 add 	= "ADD"
+true 	= "true"
+false 	= "false"
 loadI n = indent ++ "LOAD_I " ++ (show n)
 loadR s = indent ++ "LOAD_R " ++ s
 loadF s = indent ++ "LOAD_F " ++ (show s)
-loadB n = indent ++ "LOAD_B " ++ (show n)
+loadB n = indent ++ "LOAD_B " ++ n
 loadO n = indent ++ "LOAD_O " ++ (show n)
 loadOS = indent ++ "LOAD_OS"
 
@@ -72,12 +74,11 @@ codegen_Arrays m (a:rest) = (codegen_Array m 1 a)++(codegen_Arrays m rest)
 
 codegen_Fun :: Int -> I_fbody -> (Int, [String])
 codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) = 
-		(x1, com ++ lbl ++ (init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore))		
+		(x2, lbl ++ init ++ array ++ stmts' ++ret_val ++ ret_ptr ++ exit ++ restore ++ morefun)		
 	where
 		(x1, stmts') = codegen_Stmts x stmts
 		n = args
 		m = vars
-		com 	= [comment "func start"]
 		lbl 	= [label++":"]
 		init 	= [loadR "%sp", storeR "%fp", alloc n]
 		array	= codegen_Arrays m arrays
@@ -85,6 +86,7 @@ codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) =
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
 		exit 	= [alloc (-(m+1))]
 		restore = [storeR "%fp", alloc (-n), jumpS]
+		(x2,morefun) = codegen_Funs x1 fb
 
 codegen_Funs :: Int -> [I_fbody] -> (Int, [String])
 codegen_Funs n [] = (n, [])
@@ -106,7 +108,9 @@ codegen_Expr :: I_expr -> [String]
 codegen_Expr e = case e of
 	IINT x -> [loadI x]
 	IREAL x -> [loadF x]
-	IBOOL x -> [loadB x]
+	IBOOL x -> (case x of
+		True -> [loadB true]
+		False -> [loadB false])
 	IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
 	ISIZE (lvl,off,dim)	-> fp ++ ld
 		where
@@ -169,7 +173,7 @@ codegen_Stmt n s = case s of
 			[jump (label (n+1))] ++
 			[label_colon n] ++ exp2 ++ [label_colon (n+1)])	
 		where
-			(n1,exp1) 	= codegen_Stmt (n+1) s1
+			(n1,exp1) 	= codegen_Stmt (n+2) s1
 			(n2,exp2) 	= codegen_Stmt n1 s2
 	IREAD_F (lvl,off,es) -> (n, [readF, loadR "%fp", storeO off])
 	IREAD_I (lvl,off,es) -> (n, [readI, loadR "%fp", storeO off])
@@ -214,13 +218,6 @@ codegen_Prog (IPROG (fbs,vars,arrays,stmts)) = printlist prog
 		(n2, funs) 	= codegen_Funs n1 fbs
 		exit 		= [loadR "%fp", loadO (vars+1), app neg, allocS, halt]
 			
-stmts = IASS(0,1, [ IAPP(IADD_F,[IINT 1, IINT 2]) ], IINT 0)	
-fbody = [] --IFUN ("funky", [], 2, 0, [], [stmts])
-prog = IPROG (fbody, 2, [], [stmts])
-test = codegen_Prog prog
-test2 = codegen_Stmt 0 stmts
-
-
 
 
 
