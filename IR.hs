@@ -70,7 +70,7 @@ transExpr e st = case e of
 	M_bval v -> IBOOL v 
 	M_size (str, dim) -> ISIZE (lvl, off, dim)
 		where 
-			(I_VARIABLE (lvl, off, _, dim)) = look_up st str
+			(I_VARIABLE (lvl, off, _, d)) = look_up st str
 	M_id (str, es) -> IID (lvl, off, es')
 		where
 			(I_VARIABLE (lvl, off, _, dim)) = look_up st str

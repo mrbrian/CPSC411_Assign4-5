@@ -56,7 +56,7 @@ codegen_Array m dims (m_a,e:[]) = s1 ++ s2 ++ s3
 		s2 = (load_dim m_a dims) ++		-- array dims, and array size on stack
 			[loadR "%fp", loadO (m+1), -- dealloc counter .... where the 6 is??
 			loadI dims,					
-			loadR "%fp", loadO m_a,	loadO 3, 	-- array size..
+			loadR "%fp", loadO m_a,	loadO dims, 	-- array size..
 			app add, app add,
 			loadR "%fp", storeO (m+1)]
 		s3 = [allocS]
@@ -108,10 +108,10 @@ codegen_Expr e = case e of
 	IREAL x -> [loadF x]
 	IBOOL x -> [loadB x]
 	IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
-	ISIZE (lvl,off,dim)	-> fp++ld
+	ISIZE (lvl,off,dim)	-> fp ++ ld
 		where
 			fp = get_static_link lvl
-			ld = [loadO off]
+			ld = [loadO off, loadO (dim-1)]
 			
 	IAPP (op, es) -> (case op of
 		ICALL (label,lvls) -> [cmt] ++ init ++ before ++ static ++ call
@@ -207,12 +207,12 @@ codegen_Prog (IPROG (fbs,vars,arrays,stmts)) = printlist prog
 	where
 		prog = init ++ array ++ body ++ exit ++ funs
 				
-		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc (vars+1)]
+		init = [loadR "%sp", loadR "%sp", storeR "%fp", alloc vars, loadI (vars+2)]
 		array 		= codegen_Arrays vars arrays
 		body 		= (comment "body begin"):sts
 		(n1, sts) 	= codegen_Stmts 1 stmts
 		(n2, funs) 	= codegen_Funs n1 fbs
-		exit 		= [alloc (-(vars+1)), halt]
+		exit 		= [loadR "%fp", loadO (vars+1), app neg, allocS, halt]
 			
 stmts = IASS(0,1, [ IAPP(IADD_F,[IINT 1, IINT 2]) ], IINT 0)	
 fbody = [] --IFUN ("funky", [], 2, 0, [], [stmts])
