@@ -131,7 +131,7 @@ codegen_Expr e = case e of
 			where
 				cmt = comment "call"
 				m = length es
-				init 	= codegen_Exprs es
+				init 	= codegen_Exprs (reverse es)   -- load args.
 				before 	= [alloc 1] 
 				static 	= get_static_link lvls
 				call 	= [loadR "%fp", loadR "%cp", jump label]
@@ -151,7 +151,7 @@ codegen_Expr e = case e of
 		IDIV   -> load ++ [app "DIV"]
 		INEG   -> load ++ [app "NEG"]
 		ILT    -> load ++ [app "LT"]
-		ILE    -> load ++ [app "LE"]
+		ILE    -> load ++ [app "LE"]		
 		IGT    -> load ++ [app "GT"]
 		IGE    -> load ++ [app "GE"]
 		IEQ    -> load ++ [app "EQ"]
@@ -172,7 +172,7 @@ codegen_Stmt n s = case s of
 		where
 			fp = get_static_link lvl
 			a = codegen_Expr e 
-			b = codegen_Exprs es
+			b = codegen_Exprs es	-- array indices...
 			c = [storeO off]
 	IWHILE (e,stmt) -> (n1, [label_colon n] ++ (codegen_Expr e) ++ [jumpC (label n)] ++
 			exp ++ [jump (label n)])
