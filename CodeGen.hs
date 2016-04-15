@@ -45,17 +45,26 @@ halt = indent ++ "HALT"
 
 comment :: String -> String
 comment s = "%" ++ s
+
+gcd1 :: (Int, Int) -> Int
+gcd1 (x,y) = case (x<=y) of
+	True -> (case (x==y) of
+		True -> x
+		False -> gcd1 (x, y-x))
+	False -> gcd1 (x-y, x)
+
 	
-load_dim :: Int -> Int -> [String]
-load_dim m_a 1 = [loadR "%fp", loadO m_a, loadO 0]
-load_dim m_a dim = [loadR "%fp", loadO m_a, loadO (dim-1)] ++ (load_dim m_a (dim-1)) ++ [app mul]
+load_dim :: Int -> Int -> Int -> [String]
+load_dim m_a max' dim 
+	| dim == max' 	= [loadR "%fp", loadO m_a, loadO (dim-1)]
+	| otherwise  	= [loadR "%fp", loadO m_a, loadO (max'-dim-1)] ++ (load_dim m_a max' (dim+1)) ++ [app mul]
 
 codegen_Array :: Int -> Int -> (Int,[I_expr]) -> [String]
 codegen_Array _ 0 _ = error "codegen_Array: dont use zero here"
 codegen_Array m dims (m_a,e:[]) = s1 ++ s2 ++ s3
 	where
 		s1 = codegen_Expr e		-- put on stack
-		s2 = (load_dim m_a dims) ++		-- array dims, and array size on stack
+		s2 = (load_dim m_a dims 1) ++		-- array dims, and array size on stack
 			[loadR "%fp", loadO (m+1), -- dealloc counter .... where the 6 is??
 			loadI dims,					
 			loadR "%fp", loadO m_a,	loadO dims, 	-- array size..
@@ -80,11 +89,11 @@ codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) =
 		n = args
 		m = vars
 		lbl 	= [label++":"]
-		init 	= [loadR "%sp", storeR "%fp", alloc n]
+		init 	= [loadR "%sp", storeR "%fp", alloc m, loadI (m+2)]
 		array	= codegen_Arrays m arrays
 		ret_val = [loadR "%fp", storeO (-(n+3))]
 		ret_ptr = [loadR "%fp", loadO 0, loadR "%fp", storeO (-(n+2))]
-		exit 	= [alloc (-(m+1))]
+		exit 	= [loadR "%fp", loadO (m+1), app neg, allocS]
 		restore = [storeR "%fp", alloc (-n), jumpS]
 		(x2,morefun) = codegen_Funs x1 fb
 
@@ -101,7 +110,7 @@ codegen_Exprs (e:rest) = (codegen_Expr e)++(codegen_Exprs rest)
 
 get_static_link :: Int -> [String] 
 get_static_link 0 = [loadR "%fp"]
-get_static_link n = (get_static_link (n-1))++[loadO (-2)]
+get_static_link n = (get_static_link (n-1))++[loadO (-1)]
 		
 
 codegen_Expr :: I_expr -> [String]
@@ -182,16 +191,15 @@ codegen_Stmt n s = case s of
 	IPRINT_I x -> (n, (codegen_Expr x) ++ [printI])
 	IPRINT_B x -> (n, (codegen_Expr x) ++ [printB])
 	IRETURN e -> (n, codegen_Expr e)		-- just put return value on stack	
-	IBLOCK (fbodies,vars,arrs,stmts) -> (n1, [pre] ++ enter ++ body ++ exit)
+	IBLOCK (fbodies,vars,arrs,stmts) -> (n1, [pre] ++ enter ++ body ++ exit ++ reset)
 		where
 			m = vars
 			pre = comment "Block begin"
-			--arr_exps = map (\(n, es) -> es) arrs
 			enter = [loadR "%fp", alloc 1, loadR "%sp", storeR "%fp", 
-				alloc m, loadI (m+2), --codegen_Exprs arr_exps, 
-				allocS]
+				alloc m, loadI (m+2)] ++ (codegen_Arrays m arrs)
 			(n1,body) = codegen_Stmts n stmts
-			exit = [loadR "%fp", loadO (m+1), app neg, allocS]
+			exit 	= [loadR "%fp", loadO (m+1), app neg, allocS]
+			reset 	= [storeR "%fp"]
 	
 codegen_Stmts :: Int -> [I_stmt] -> (Int,[String])
 codegen_Stmts n [] = (n, [])
