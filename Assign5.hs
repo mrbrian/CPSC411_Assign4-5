@@ -15,25 +15,30 @@ import IR
 import AST_to_IR
 import CodeGen
 import Semantic			 
-			 
-main = do
+			
+		
+main = do 
 	args <- getArgs
-	conts <- readFile (args !! 0)
-	let tok = tokens conts
-	let ptree = pProg tok       
-	putStrLn "The AST Tree:\n"
-	case ptree of
-		Ok  tree -> do
-			let ast = transProg tree			
-			let type_check = checkProg ast 
-			let ir = processProg ast
-			let code = codegen_Prog ir
-			(case type_check of
-				True -> do
-					putStrLn $ ((ppShow ast) ++ "\n\nSemantic check passed!\n\n" ++ (ppShow ir) ++ conts ++ "\n" ++ code)					
-					writeFile "output" code
-				False -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check failed.\n\n"))
-		Bad msg-> putStrLn msg
-
+	case length args == 2 of
+		False  -> do 
+			let usage = "\nExpecting of the form < ./Assign5 inputfile outputfile >.\n\nTry again. :(\n"
+			error $ "\n****************Error: Expecting input and output filenames as arguments." ++ usage
+		True -> do		
+			conts <- readFile (args !! 0)
+			let tok = tokens conts
+			let ptree = pProg tok       
+			putStrLn "The AST Tree:\n"
+			case ptree of
+				Ok  tree -> do
+					let ast = transProg tree			
+					let type_check = checkProg ast 
+					let ir = processProg ast
+					let code = codegen_Prog ir
+					(case type_check of
+						True -> do
+							putStrLn $ ((ppShow ast) ++ "\n\nSemantic check passed!\n\n" ++ (ppShow ir) ++ conts ++ "\n" ++ code)					
+							writeFile "output" code
+						False -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check failed.\n\n"))
+				Bad msg-> putStrLn msg
 		
 		

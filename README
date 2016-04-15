@@ -1,26 +1,26 @@
-CPSC411 Assignment4
+CPSC411 Assignment5
 Brian Yee
 00993104
 T02
 
 Description
 ===========
-	Semantic Analyser/IR Generator
+	AM Code generation
 	- does semantic analysis and generates IR from input code
 	- requires Text.Show.Pretty library (cabal install pretty-show)
 	
 Usage:
 ======
 	make	
-	./Assign4 <input file>
+	./Assign5 <input file> <output file>
 		
 	
 Files included:
 ===============
 	README
 	Makefile
-	Plumbing_diagrams.pdf
-	Assign4.hs
+	Assign5.hs
+	CodeGen.hs
 	AST_to_IR.hs
 	IR.hs
 	Semantic.hs
@@ -34,13 +34,9 @@ Files included:
 	PrintMp.hs
 	SkelMp.hs
 	TestMp.hs
-	ex1.txt
-	ex2.txt
-	ex3.txt
-	ex4.txt
-	ex5.txt
-	ex6.txt
-	
+	amtest1.txt
+	amtest2.txt
+	amtest3.txt
 
 	
 	
