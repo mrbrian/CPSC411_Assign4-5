@@ -29,6 +29,7 @@ storeI s = indent ++ "STORE_I "  ++ s
 storeR s = indent ++ "STORE_R "  ++ s
 storeB s = indent ++ "STORE_B "  ++ s
 storeO n = indent ++ "STORE_O " ++ (show n) 
+storeOS  = indent ++ "STORE_OS" 
 
 jump s = indent ++ "JUMP " ++ s
 jumpS = indent ++ "JUMP_S"
@@ -165,15 +166,23 @@ codegen_Expr e = case e of
 			where
 				load = codegen_Exprs es
 		
+get_array_stack_ptr :: [I_expr] -> [String]
+get_array_stack_ptr [] = []
+get_array_stack_ptr es = (codegen_Exprs es) ++ [loadOS]
 			
 codegen_Stmt :: Int -> I_stmt -> (Int, [String])
 codegen_Stmt n s = case s of
-	IASS (lvl,off,es,e) -> (n, a ++ fp ++ b ++ c)
+	IASS (lvl,off,[],e) -> (n, val ++ fp ++ c)
 		where
-			fp = get_static_link lvl
-			a = codegen_Expr e 
-			b = codegen_Exprs es	-- array indices...
+			val = codegen_Expr e   -- the value
+			fp = (get_static_link lvl) 
 			c = [storeO off]
+	IASS (lvl,off,es,e) -> (n, val ++ fp ++ b ++ c)
+		where
+			val = codegen_Expr e   -- the value
+			fp = (get_static_link lvl) ++ [loadO off] -- get stack ptr
+			b = get_array_stack_ptr es	-- array indices...
+			c = [storeOS]
 	IWHILE (e,stmt) -> (n1, [label_colon n] ++ (codegen_Expr e) ++ [jumpC (label n)] ++
 			exp ++ [jump (label n)])
 		where

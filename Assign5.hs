@@ -37,7 +37,7 @@ main = do
 					(case type_check of
 						True -> do
 							putStrLn $ ((ppShow ast) ++ "\n\nSemantic check passed!\n\n" ++ (ppShow ir) ++ conts ++ "\n" ++ code)					
-							writeFile "output" code
+							writeFile (args !! 1) code
 						False -> putStrLn $ ((ppShow ast) ++ "\n\nSemantic check failed.\n\n"))
 				Bad msg-> putStrLn msg
 		
