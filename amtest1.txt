@@ -1,17 +1,15 @@
+%array tests
 
-var x:int;
 var y:int;
-fun exp(b:int):int
-{
-	var z:int;
-	begin
-		if b=0 then z:=1
-			else z:=x * exp(b-1);
-	return z;
-	end
-};
+var x[3][2]:int;
+
 begin
-	read x;
-	read y;
-	print exp(y);
+	x[0][0] := 1;
+	x[0][1] := 2;
+	x[1][0] := 3;
+	x[1][1] := 4;
+	x[2][0] := 5;
+	x[2][1] := 6;
+	print (x[1][1]);
+	print (size(x[1]));
 end

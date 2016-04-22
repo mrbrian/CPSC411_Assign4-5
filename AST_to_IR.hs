@@ -64,7 +64,6 @@ processFun (M_fun (name, args, ret_type, decls, stmts)) (n, st) = ([func], 0, []
 		I_FUNCTION (st_level, st_label, st_args, st_type) = look_up st4 name
 		(dec_funcs, dec_num_vars, dec_arrays, (n4, st5)) = processDecls decls (n3,st4)
 		stmts' = processStmts stmts (n4, st5)
-		
 		func = IFUN (st_label, dec_funcs, dec_num_vars, length st_args, dec_arrays, stmts')
 
 processStmts :: [M_stmt] -> (Int,ST) -> [I_stmt]

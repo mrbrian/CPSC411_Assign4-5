@@ -1,12 +1,14 @@
-var y:int;
+%passing an array as an argument
+
 var x[3][2]:int;
 
+fun printsize(x[]:int)
+{
+	begin
+		print size(x);
+	end
+}
+
 begin
-	print size(x);
-	print size(x[]);
-	print size(x[][]);
-	print size(x[][][]);
-	y := 52;
-	x[2][0] := 9;
-	x[2][1] := 6;
+	printsize(x[]);
 end
