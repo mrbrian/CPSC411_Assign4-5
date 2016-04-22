@@ -111,7 +111,7 @@ codegen_Exprs (e:rest) = (codegen_Expr e)++(codegen_Exprs rest)
 
 get_static_link :: Int -> [String] 
 get_static_link 0 = [loadR "%fp"]
-get_static_link n = (get_static_link (n-1))++[loadO (-1)]
+get_static_link n = (get_static_link (n-1))++[loadO (-2)]
 		
 
 codegen_Expr :: I_expr -> [String]
@@ -121,7 +121,13 @@ codegen_Expr e = case e of
 	IBOOL x -> (case x of
 		True -> [loadB true]
 		False -> [loadB false])
-	IID (lvls,offs,es) -> get_static_link lvls ++ [loadO offs] 
+	IID (lvls,offs,[]) -> get_static_link lvls ++ [loadO offs] 
+	IID (lvls,offs,es) -> s
+		where
+			s1 = (get_static_link lvls) ++ [loadO offs] 
+			s2 = load_array_index1 lvls offs (length es) es
+			s3 = [loadOS] 
+			s = s1 ++ s2 ++ s3
 	ISIZE (lvl,off,dim)	-> fp ++ ld
 		where
 			fp = get_static_link lvl
@@ -164,12 +170,58 @@ codegen_Expr e = case e of
 		IFLOOR -> load ++ [app "FLOOR"]
 		)
 			where
-				load = codegen_Exprs es
+				load = codegen_Exprs es		
+				
+get_array_stack_ptr2 :: I_expr -> [Int] -> Int -> ([String], [Int], Int)
+get_array_stack_ptr2 e (d:ds) fac = (s, ds, fac')
+	where	
+		s = (codegen_Expr e) ++ [loadI fac, app mul]
+		fac' = fac * d
+
+-- load the nth dimension size
+load_array_dim :: Int -> Int -> Int -> [String]
+load_array_dim lvl off dim = s
+	where
+		dim_off = dim -- zero based
+		s1 = (get_static_link lvl) ++ [loadO off] -- put the stack ptr to the array on stack
+		s2 = [loadO dim_off]
+		s = s1 ++ s2
 		
-get_array_stack_ptr :: [I_expr] -> [String]
-get_array_stack_ptr [] = []
-get_array_stack_ptr es = (codegen_Exprs es) ++ [loadOS]
-			
+load_n_str :: String -> Int -> [String]
+load_n_str s 0 = []
+load_n_str s n = s : (load_n_str s (n-1))
+
+load_dim_sizes_S :: Int -> Int -> Int -> Int -> [String]
+load_dim_sizes_S lvl off num_dims 0 = [loadI 1]
+load_dim_sizes_S lvl off num_dims dim_count
+	| dim_count <= 0 = [loadI 1]		
+	| otherwise = s
+		where
+			dim = num_dims - dim_count 
+			s1 = load_array_dim lvl off dim
+			s2 = load_dim_sizes_S lvl off num_dims (dim_count - 1)
+			s = s1 ++ s2
+
+load_array_index2 :: Int -> Int -> Int -> [I_expr] -> [String]
+load_array_index2 lvl off num_dims [] = []
+load_array_index2 lvl off num_dims idxs@(idx:rest) = s
+	where
+		count = length idxs
+		s1 = load_dim_sizes_S lvl off num_dims (count - 1)
+		s2 = codegen_Expr idx 	-- load the.. yth index value.
+		s3 = load_n_str (app mul) count  	-- get product
+		s4 = load_array_index2 lvl off num_dims rest		
+		s = s1 ++ s2 ++ s3 ++ s4
+
+load_array_index1 :: Int -> Int -> Int -> [I_expr] -> [String]
+load_array_index1 lvl off num_dims [] = []
+load_array_index1 lvl off num_dims idxs@(idx:rest) = s		
+	where
+		s1 = load_array_index2 lvl off num_dims idxs
+		s2 = load_n_str (app add) ((length idxs)-1)
+		s3 = [loadI (length idxs), app add]  -- offset from the array dimensions
+		s = s1 ++ s2 ++ s3
+		
 codegen_Stmt :: Int -> I_stmt -> (Int, [String])
 codegen_Stmt n s = case s of
 	IASS (lvl,off,[],e) -> (n, val ++ fp ++ c)
@@ -177,12 +229,12 @@ codegen_Stmt n s = case s of
 			val = codegen_Expr e   -- the value
 			fp = (get_static_link lvl) 
 			c = [storeO off]
-	IASS (lvl,off,es,e) -> (n, val ++ fp ++ b ++ c)
+	IASS (lvl,off,es,e) -> (n, val ++ fp ++ idx ++ c)
 		where
-			val = codegen_Expr e   -- the value
+			val = codegen_Expr e   -- puts the value is on the stack						
 			fp = (get_static_link lvl) ++ [loadO off] -- get stack ptr
-			b = get_array_stack_ptr es	-- array indices...
-			c = [storeOS]
+			idx = load_array_index1 lvl off (length es) es 	-- put the array index offset on stack			
+			c = [storeOS]	-- store value at index offset. from stack pointer
 	IWHILE (e,stmt) -> (n1, [label_colon n] ++ (codegen_Expr e) ++ [jumpC (label n)] ++
 			exp ++ [jump (label n)])
 		where
@@ -204,8 +256,8 @@ codegen_Stmt n s = case s of
 		where
 			m = vars
 			pre = comment "Block begin"
-			enter = [loadR "%fp", alloc 1, loadR "%sp", storeR "%fp", 
-				alloc m, loadI (m+2)] ++ (codegen_Arrays m arrs)
+			enter = [loadR "%fp", alloc 2, loadR "%sp", storeR "%fp", 
+				alloc m, loadI (m+3)] ++ (codegen_Arrays m arrs)
 			(n1,body) = codegen_Stmts n stmts
 			exit 	= [loadR "%fp", loadO (m+1), app neg, allocS]
 			reset 	= [storeR "%fp"]
