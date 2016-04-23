@@ -54,33 +54,50 @@ gcd1 (x,y) = case (x<=y) of
 		False -> gcd1 (x, y-x))
 	False -> gcd1 (x-y, x)
 
-	
+-- 
 load_dim :: Int -> Int -> Int -> [String]
 load_dim m_a max' dim 
-	| dim == max' 	= [loadR "%fp", loadO m_a, loadO (dim-1)]
-	| otherwise  	= [loadR "%fp", loadO m_a, loadO (max'-dim-1)] ++ (load_dim m_a max' (dim+1)) ++ [app mul]
+	| dim >= max' = [] --[loadR "%fp", loadO m_a, loadO (dim+1)]
+	| otherwise = [loadR "%fp", loadO m_a, loadO dim] ++ (load_dim m_a max' (dim+1)) 
 
-codegen_Array :: Int -> Int -> (Int,[I_expr]) -> [String]
-codegen_Array _ 0 _ = error "codegen_Array: dont use zero here"
-codegen_Array m dims (m_a,e:[]) = s1 ++ s2 ++ s3
+codegen_Array2 :: Int -> Int -> (Int,[I_expr]) -> [String]
+codegen_Array2 _ 0 _ = error "codegen_Array2: dont use zero here"
+codegen_Array2 m dims (m_a,e:[]) = s1 ++ s2 ++ s3 
 	where
 		s1 = codegen_Expr e		-- put on stack
-		s2 = (load_dim m_a dims 1) ++		-- array dims, and array size on stack
-			[loadR "%fp", loadO (m+1), -- dealloc counter .... where the 6 is??
+		s2 = ["%Hi1"] ++ (load_dim m_a dims 0) ++		-- array dims, and array size on stack
+			(load_n_str (app mul) (dims - 1)) ++
+			[loadR "%fp", loadO (m+1), -- dealloc counter 
 			loadI dims,					
-			loadR "%fp", loadO m_a,	loadO dims, 	-- array size..
-			app add, app add,
-			loadR "%fp", storeO (m+1)]
+			loadR "%fp", loadO m_a,	loadO dims] ++ 	-- # dims
+			(load_n_str (app add) 2) ++
+			[loadR "%fp", storeO (m+1)]	-- update dealloc
 		s3 = [allocS]
-codegen_Array m dims (m_a,(e:es)) = s1 ++ s2 ++ (codegen_Array m (dims+1) (m_a,es))
+codegen_Array2 m dims (m_a,(e:es)) = s1 ++ s2
 	where
-		s1 = codegen_Expr e 	-- first dimension on stack
-		s2 = [loadR "%sp", loadR "%fp", storeO m_a]  -- make array pointer
-		
+		s1 = codegen_Expr e 	-- dimension on stack
+		s2 = codegen_Array2 m dims (m_a, es)
+
+assign_array_ptr :: I_expr -> Int -> [String]
+assign_array_ptr e m_a = (codegen_Expr e) ++ [loadR "%sp", loadR "%fp", storeO m_a]
+
+codegen_Array1 :: Int -> (Int,[I_expr]) -> [String]
+codegen_Array1 m (m_a, (e:[])) = ["%a1:"] ++s1 ++ s2 ++ s3 
+	where
+		s1 = assign_array_ptr e m_a -- assign array ptr..		
+		size = load_dim m_a 1 0
+		s2 = size ++ size ++		-- array dims, and array size on stack
+			[loadR "%fp", loadO (m+1), -- dealloc counter 
+			loadI 1] ++					-- # dimensions
+			(load_n_str (app add) 2) ++
+			[loadR "%fp", storeO (m+1)]	-- update dealloc
+		s3 = [allocS]		
+codegen_Array1 m (m_a, exs@(e:rest)) = (assign_array_ptr e m_a) ++ codegen_Array2 m (length exs) (m_a,rest)
+
 		
 codegen_Arrays :: Int -> [(Int,[I_expr])] -> [String]
 codegen_Arrays m [] = []
-codegen_Arrays m (a:rest) = (codegen_Array m 1 a)++(codegen_Arrays m rest)
+codegen_Arrays m (a:rest) = (codegen_Array1 m a)++(codegen_Arrays m rest)
 
 codegen_Fun :: Int -> I_fbody -> (Int, [String])
 codegen_Fun x (IFUN (label, fb, vars, args, arrays, stmts)) = 

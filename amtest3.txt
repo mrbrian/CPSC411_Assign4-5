@@ -1,8 +1,17 @@
+% user defined array size
+
 var y:int;
-var x[3][2]:int;
+
+fun test(s:int):int
+{
+	var x[s]:int;
+	
+	begin
+		return size(x);		
+	end
+};
 
 begin
-	y := 52;
-	x[2][0] := 9;
-	x[2][1] := 6;
+	y := 6;
+	print test(y);
 end
