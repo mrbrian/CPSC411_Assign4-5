@@ -252,8 +252,8 @@ codegen_Stmt n s = case s of
 			fp = (get_static_link lvl) ++ [loadO off] -- get stack ptr
 			idx = load_array_index1 lvl off (length es) es 	-- put the array index offset on stack			
 			c = [storeOS]	-- store value at index offset. from stack pointer
-	IWHILE (e,stmt) -> (n1, [label_colon n] ++ (codegen_Expr e) ++ [jumpC (label n)] ++
-			exp ++ [jump (label n)])
+	IWHILE (e,stmt) -> (n1+1, [label_colon n] ++ (codegen_Expr e) ++ [jumpC (label (n1+1))] ++
+			exp ++ [jump (label n), label_colon (n1+1)])
 		where
 			(n1,exp) = codegen_Stmt (n+1) stmt
 	ICOND (e,s1,s2) -> (n2, (codegen_Expr e) ++ [jumpC (label n)] ++ exp1 ++ 
