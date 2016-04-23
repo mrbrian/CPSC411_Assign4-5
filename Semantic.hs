@@ -129,7 +129,7 @@ checkDecls d_list@(decl:decls) (n,st) = (n2,st2,v)
      where 
 		v_list = filter (\a -> is_var a) d_list
 		f_list = filter (\a -> not (is_var a)) d_list 		
-		(decl':decls') = v_list ++ f_list
+		(decl':decls') = v_list ++ (reverse f_list)
 		(n1,st1,v1) = checkDecl decl' (n,st)
 		(n2,st2,v2) = checkDecls decls' (n1,st1)
 		v = v1 && v2

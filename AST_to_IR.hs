@@ -8,7 +8,10 @@ processProg :: M_prog -> I_prog
 processProg (M_prog (decls, stmts)) = IPROG (funcs, num_vars, arrays, stmts')
    where
 	 st = new_scope L_PROG []
-	 (funcs, num_vars, arrays, st') = processDecls decls (1, st)	 
+	 v_list = filter (\a -> is_var a) decls
+	 f_list = filter (\a -> not (is_var a)) decls
+	 decls' = v_list ++ (reverse f_list)
+	 (funcs, num_vars, arrays, st') = processDecls decls' (1, st)	 
 	 stmts' = processStmts stmts st' 
 
 processDecls :: [M_decl] -> (Int, ST) -> ([I_fbody], Int, [(Int, [I_expr])], (Int, ST))
